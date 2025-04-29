@@ -6,7 +6,7 @@ This repository contains general functionalities and tools for the STRONG AYA pr
 They are designed to be used with the Vantage6 framework for federated analytics and learning
 and are intended to facilitate and simplify the development of Vantage6 algorithms.
 
-The code in this repository is available as a Python library on PyPi titled: `vantage6-strongaya-general`.
+The code in this repository is available as a Python library here on GitHub or through direct reference with `pip`.
 
 # Structure of the repository
 
@@ -31,7 +31,7 @@ algorithm.
 For the `requirements.txt` file, you can add the following line to the file:
 
 ```
-vantage6-strongaya-general
+git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.0
 ```
 
 For the `setup.py` file, you can add the following line to the `install_requires` list:
@@ -58,7 +58,7 @@ setup(
         'vantage6-algorithm-tools',
         'numpy',
         'pandas',
-        'vantage6-strongaya-general',
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.0",
     # other dependencies
     ]
 )
@@ -136,9 +136,7 @@ from vantage6.algorithm.client import AlgorithmClient
 # General federated algorithm functions
 from vantage6_strongaya_general.general_statistics import compute_local_general_statistics
 from vantage6_strongaya_general.miscellaneous import apply_data_stratification, set_datatypes, safe_log
-from vantage6_strongaya_general.privacy_measures import apply_sample_size_threshold, mask_unnecessary_variables,
-
-apply_differential_privacy
+from vantage6_strongaya_general.privacy_measures import apply_sample_size_threshold, mask_unnecessary_variables, apply_differential_privacy
 
 
 @data(1)
@@ -184,14 +182,14 @@ The various functions are available through `pip install` for debugging and test
 The library can be installed as follows:
 
 ```bash
-pip install vantage6-strongaya-general
+pip install git+https://github.com/STRONGAYA/v6-tools-general.git
 ```
 
 # Contributers
 
-- [@JHogenboom](JHogenboom)
-- [@VarshaGouthamchand](VarshaGouthamchand)
-- [@aiaragomes](aiaragomes)
+- [@JHogenboom]
+- [@VarshaGouthamchand]
+- [@aiaragomes]
 
 # References
 
