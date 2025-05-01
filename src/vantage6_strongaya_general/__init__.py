@@ -23,4 +23,4 @@ from .general_statistics import (
     compute_local_adjusted_deviation
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
