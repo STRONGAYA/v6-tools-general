@@ -248,8 +248,8 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
     Returns:
         pd.DataFrame: Aggregated statistics DataFrame.
     """
-    # Initialise a list to store the aggregated results
     aggregated_results = []
+    has_predetermined_info = hasattr(df, "predetermined_info")
 
     for variable in df["variable"].unique():
         # Filter the DataFrame for the current variable
@@ -258,46 +258,72 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
         # Sort index to prevent performance warning
         column_statistics_series = column_statistics.set_index(['variable', 'statistic'])['value'].sort_index()
 
-        # Compute summable statistics
-        column_statistics_series = safe_calculate(
-            _compute_aggregate_summable_statistics,
-            column_statistics_series,
-            numerical_statistics=column_statistics_series,
-            statistics_to_sum=["sum", "count", "outliers", "nan", "sq_dev_sum"]
-        )
+        # Get all predetermined stats for this column if available
+        variable_stats = {}
+        if has_predetermined_info:
+            try:
+                variable_stats = df.predetermined_info.get_column_stats(variable)
+            except KeyError:
+                continue
+
+        # Compute summable statistics if they do not exist yet
+        if 'summable_statistics' in variable_stats:
+            column_statistics_series = pd.Series(variable_stats['summable_statistics'])
+        else:
+            column_statistics_series = safe_calculate(
+                _compute_aggregate_summable_statistics,
+                column_statistics_series,
+                numerical_statistics=column_statistics_series,
+                statistics_to_sum=["sum", "count", "outliers", "na", "sq_dev_sum"]
+            )
 
         # Sort index for performance
         column_statistics_series = column_statistics_series.sort_index()
 
-        # Calculate aggregate statistics safely
-        min_max_values = safe_calculate(
-            _compute_aggregate_minmax,
-            {"min": 0.0, "max": 0.0},
-            numerical_statistics=column_statistics_series
-        )
+        # Calculate aggregate statistics safely if they do not exist yet
+        if 'min_max_values' in variable_stats:
+            min_max_values = pd.Series(variable_stats['min_max_values'])
+        else:
+            min_max_values = safe_calculate(
+                _compute_aggregate_minmax,
+                {"min": 0.0, "max": 0.0},
+                numerical_statistics=column_statistics_series
+            )
 
-        federated_quantiles = safe_calculate(
-            _compute_aggregate_quantiles,
-            {"Q1": 0.0, "Q2": 0.0, "Q3": 0.0, "Q1_std_err": 0.0, "Q2_std_err": 0.0, "Q3_std_err": 0.0},
-            numerical_statistics=column_statistics_series
-        )
+        # Calculate federated quantiles safely if they do not exist yet
+        if 'federated_quantiles' in variable_stats:
+            federated_quantiles = variable_stats['federated_quantiles']
+        else:
+            federated_quantiles = safe_calculate(
+                _compute_aggregate_quantiles,
+                {"Q1": 0.0, "Q2": 0.0, "Q3": 0.0, "Q1_std_err": 0.0, "Q2_std_err": 0.0, "Q3_std_err": 0.0},
+                numerical_statistics=column_statistics_series
+            )
 
-        mean = safe_calculate(
-            _compute_aggregate_mean,
-            0.0,
-            numerical_statistics=column_statistics_series
-        )
+        # Calculate mean and safely if it does not exist yet
+        if 'mean' in variable_stats:
+            mean = variable_stats['mean']
+        else:
+            mean = safe_calculate(
+                _compute_aggregate_mean,
+                0.0,
+                numerical_statistics=column_statistics_series
+            )
 
-        std = safe_calculate(
-            _compute_aggregate_deviation,
-            0.0,
-            numerical_statistics=column_statistics_series
-        )
+        # Calculate standard deviation safely if it does not exist yet
+        if 'std' in variable_stats:
+            std = variable_stats['std']
+        else:
+            std = safe_calculate(
+                _compute_aggregate_deviation,
+                0.0,
+                numerical_statistics=column_statistics_series
+            )
 
         # Create DataFrame with aggregated statistics
         aggregated_stats = pd.DataFrame({
             "variable": [variable] * 10,
-            "statistic": ["min", "q1", "median", "q3", "max", "mean", "std", "count", "outliers", "nan"],
+            "statistic": ["min", "q1", "median", "q3", "max", "mean", "std", "count", "outliers", "na"],
             "value": [
                 float(min_max_values['min']),
                 float(federated_quantiles['Q1']),
@@ -308,7 +334,7 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
                 float(std),
                 float(column_statistics_series.loc[(variable, 'count')].iloc[0]),
                 float(column_statistics_series.loc[(variable, 'outliers')].iloc[0]),
-                float(column_statistics_series.loc[(variable, 'nan')].iloc[0])
+                float(column_statistics_series.loc[(variable, 'na')].iloc[0])
             ]
         })
 
@@ -329,7 +355,6 @@ def _orchestrate_aggregate_adjusted_deviation(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Aggregated DataFrame with adjusted standard deviations
     """
-    # Initialize a list to store the adjusted deviations per variable
     adjusted_deviations = []
 
     for variable in df["variable"].unique():
@@ -375,6 +400,10 @@ def _orchestrate_local_categorical_statistics(
     removes outliers based on the provided inliers list, and returns a DataFrame
     with the value counts and outliers for each categorical variable.
 
+    Computation of given statistics can be skipped if they are already present in the predetermined_info
+    attribute that can be generated through the miscellaneous module.
+    Ensure that statistics that should be skipped can be found through the keys used in this function.
+
     Args:
         df (pd.DataFrame): The input DataFrame containing the data.
         variable_details (Optional[Dict[str, Dict[str, Any]]]): A dictionary where keys are column names and
@@ -384,8 +413,8 @@ def _orchestrate_local_categorical_statistics(
         pd.DataFrame: A DataFrame with columns "Variable", "Value", and "count"
                       representing the value counts and outliers for each categorical variable.
     """
-    # Initialise a list to store the rows for the final DataFrame
     categorical_data = []
+    has_predetermined_info = hasattr(df, "predetermined_info")
 
     # Iterate over each column
     for column_name in df.columns:
@@ -394,12 +423,23 @@ def _orchestrate_local_categorical_statistics(
         # Get the column values
         column_values = df[column_name]
 
+        # Get all predetermined stats for this column if available
+        column_stats = {}
+        if has_predetermined_info:
+            try:
+                column_stats = df.predetermined_info.get_column_stats(column_name)
+            except KeyError:
+                continue
+
         # Get the value counts for the column safely
-        value_counts = safe_calculate(
-            _compute_local_value_counts,
-            pd.Series(dtype='float64'),
-            column_values=column_values
-        )
+        if 'value_counts' in column_stats:
+            value_counts = pd.Series(column_stats['value_counts'])
+        else:
+            value_counts = safe_calculate(
+                _compute_local_value_counts,
+                pd.Series(dtype='float64'),
+                column_values=column_values
+            )
 
         # Get the inliers for the column from the provided dictionary
         if variable_details is not None and column_name in variable_details:
@@ -408,21 +448,27 @@ def _orchestrate_local_categorical_statistics(
             inliers = []
 
         # Get the inliers and outliers safely
-        inliers_series, outliers_series = safe_calculate(
-            _compute_local_inliers_and_outliers,
-            (pd.Series(dtype='float64'), pd.Series(dtype='float64')),
-            column_values=value_counts,
-            inliers=inliers
-        )
+        if 'inliers_series' in column_stats and 'outliers_series' in column_stats:
+            inliers_series = pd.Series(column_stats['inliers_series'])
+            outliers_series = pd.Series(column_stats['outliers_series'])
+        else:
+            inliers_series, outliers_series = safe_calculate(
+                _compute_local_inliers_and_outliers,
+                (pd.Series(dtype='float64'), pd.Series(dtype='float64')),
+                column_values=value_counts,
+                inliers=inliers
+            )
 
-        # Get the missing values count and replace with pd.NA safely
-        na_count, column_values = safe_calculate(
-            _compute_local_missing_values,
-            (0, pd.Series(dtype='float64')),
-            column_values=column_values,
-            placeholder='_true_missing_',
-            replace_with_na=True
-        )
+        if 'na' in column_stats:
+            na_count = column_stats['na']
+        else:
+            # Get the missing values count and replace with pd.NA safely
+            na_count, column_values = safe_calculate(
+                _compute_local_missing_values,
+                (0, pd.Series(dtype='float64')),
+                column_values=column_values,
+                replace_with_na=True
+            )
 
         # Append the value counts to the row's list
         for val, cnt in inliers_series.items():
@@ -432,7 +478,7 @@ def _orchestrate_local_categorical_statistics(
         categorical_data.append((column_name, "outliers", outliers_series.sum()))
 
         # Append the missing values count to the row's list
-        categorical_data.append((column_name, "nan", na_count))
+        categorical_data.append((column_name, "na", na_count))
 
     # Return the final DataFrame
     return pd.DataFrame(categorical_data, columns=["variable", "value", "count"])
@@ -445,6 +491,10 @@ def _orchestrate_local_numerical_statistics(
     """
     Retrieve general statistics for numerical variables in a DataFrame.
 
+    Computation of given statistics can be skipped if they are already present in the predetermined_info
+    attribute that can be generated through the miscellaneous module.
+    Ensure that statistics that should be skipped can be found through the keys used in this function.
+
     Args:
         df (pd.DataFrame): The input DataFrame containing the data.
         variable_details (Optional[Dict[str, Dict[str, Any]]]): A dictionary where keys are column names
@@ -454,8 +504,8 @@ def _orchestrate_local_numerical_statistics(
         pd.DataFrame: A DataFrame with columns "variable", "statistic",
                       and "value" representing the statistics for each numerical variable.
     """
-    # Initialise a list to store the numerical general statistics
     numerical_data = []
+    has_predetermined_info = hasattr(df, "predetermined_info")
 
     # Compute the general statistics for the numerical variables
     for column_name in df.columns:
@@ -464,14 +514,24 @@ def _orchestrate_local_numerical_statistics(
         # Get the column values
         column_values = df[column_name]
 
-        # Count the occurrences of the numerical placeholder and replace with pd.NA safely
-        true_na_count, column_values = safe_calculate(
-            _compute_local_missing_values,
-            (0, pd.Series(dtype='float64')),
-            column_values=column_values,
-            placeholder=-9999999999999999999999999999,
-            replace_with_na=True
-        )
+        # Get all predetermined stats for this column if available
+        column_stats = {}
+        if has_predetermined_info:
+            try:
+                column_stats = df.predetermined_info.get_column_stats(column_name)
+            except KeyError:
+                continue
+
+        # Count the occurrences of missing values safely if it does not exist yet
+        if 'na' in column_stats:
+            na_count = column_stats['na']
+        else:
+            na_count, column_values = safe_calculate(
+                _compute_local_missing_values,
+                (0, pd.Series(dtype='float64')),
+                column_values=column_values,
+                replace_with_na=True
+            )
 
         # Get the inliers for the column from the provided dictionary
         if variable_details is not None and column_name in variable_details:
@@ -479,56 +539,79 @@ def _orchestrate_local_numerical_statistics(
         else:
             inliers_range = [float("-inf"), float("inf")]
 
-        # Identify outliers by excluding values outside the inliers range safely
-        inliers_series, outliers_series = safe_calculate(
-            _compute_local_inliers_and_outliers,
-            (pd.Series(dtype='float64'), pd.Series(dtype='float64')),
-            column_values=column_values,
-            inliers=inliers_range
-        )
+        # Identify outliers by excluding values outside the inliers range safely if they do not exist yet
+        if 'inlier_series' in column_stats and 'outlier_series' in column_stats:
+            inliers_series = pd.Series(column_stats['inlier_series'])
+            outliers_series = pd.Series(column_stats['outlier_series'])
+        else:
+            inliers_series, outliers_series = safe_calculate(
+                _compute_local_inliers_and_outliers,
+                (pd.Series(dtype='float64'), pd.Series(dtype='float64')),
+                column_values=column_values,
+                inliers=inliers_range
+            )
 
-        # Compute the mean safely
-        mean = safe_calculate(
-            _compute_local_mean,
-            0.0,
-            column_values=inliers_series
-        )
+        # Compute the mean safely if it does not exist yet
+        if 'mean' in column_stats:
+            mean = column_stats['mean']
+        else:
+            mean = safe_calculate(
+                _compute_local_mean,
+                0.0,
+                column_values=inliers_series
+            )
 
-        # Compute the minimum and maximum safely
-        min_val, max_val = safe_calculate(
-            _compute_local_min_max,
-            (0.0, 0.0),
-            column_values=inliers_series
-        )
+        # Compute the minimum and maximum safely if they do not exist yet
+        if 'min_val' in column_stats and 'max_val' in column_stats:
+            min_val = column_stats['min_val']
+            max_val = column_stats['max_val']
+        else:
+            min_val, max_val = safe_calculate(
+                _compute_local_min_max,
+                (0.0, 0.0),
+                column_values=inliers_series
+            )
 
-        # Compute the number of rows safely
-        number_of_rows = safe_calculate(
-            _compute_local_number_of_rows,
-            0,
-            column_values=inliers_series,
-            drop_na=True
-        )
+        # Compute the number of rows safely if it does not exist yet
+        if 'number_of_rows' in column_stats:
+            number_of_rows = column_stats['number_of_rows']
+        else:
+            number_of_rows = safe_calculate(
+                _compute_local_number_of_rows,
+                0,
+                column_values=inliers_series,
+                drop_na=True
+            )
 
-        # Compute quantiles safely
-        quantiles = safe_calculate(
-            _compute_local_quantiles,
-            {"Q1": 0.0, "variance_Q1": 0.0, "Q2": 0.0, "variance_Q2": 0.0, "Q3": 0.0, "variance_Q3": 0.0},
-            column_values=inliers_series
-        )
+        # Compute quantiles safely if they do not exist yet
+        if 'quantiles' in column_stats:
+            quantiles = column_stats['quantiles']
+        else:
+            quantiles = safe_calculate(
+                _compute_local_quantiles,
+                {"Q1": 0.0, "variance_Q1": 0.0, "Q2": 0.0, "variance_Q2": 0.0, "Q3": 0.0, "variance_Q3": 0.0},
+                column_values=inliers_series
+            )
 
-        # Compute the sum of rows safely
-        sum_of_rows = safe_calculate(
-            _compute_local_sum,
-            0.0,
-            column_values=inliers_series
-        )
+        # Compute the sum of rows safely if it does not exist yet
+        if 'sum_of_rows' in column_stats:
+            sum_of_rows = column_stats['sum_of_rows']
+        else:
+            sum_of_rows = safe_calculate(
+                _compute_local_sum,
+                0.0,
+                column_values=inliers_series
+            )
 
-        # Compute the sum of squared errors safely
-        sum_errors2 = safe_calculate(
-            _compute_local_sum_of_squared_errors,
-            0.0,
-            column_values=inliers_series
-        )
+        # Compute the sum of squared errors safely if it does not exist yet
+        if 'sum_errors2' in column_stats:
+            sum_errors2 = column_stats['sum_errors2']
+        else:
+            sum_errors2 = safe_calculate(
+                _compute_local_sum_of_squared_errors,
+                0.0,
+                column_values=inliers_series
+            )
 
         # Append the statistics to the list
         numerical_data.extend([
@@ -541,7 +624,7 @@ def _orchestrate_local_numerical_statistics(
             (column_name, "variance_Q3", quantiles['variance_Q3']),
             (column_name, "max", max_val),
             (column_name, "mean", mean),
-            (column_name, "nan", true_na_count),
+            (column_name, "na", na_count),
             (column_name, "sum", sum_of_rows),
             (column_name, "count", number_of_rows),
             (column_name, "sq_dev_sum", sum_errors2),
@@ -573,7 +656,6 @@ def _orchestrate_local_adjusted_deviation(
         pd.DataFrame: DataFrame with columns "variable", "statistic", and "value"
                       representing the adjusted deviation for each variable.
     """
-    # Initialise a list to store the adjusted deviations per variable
     adjusted_deviations = []
 
     for column_name in df.columns:

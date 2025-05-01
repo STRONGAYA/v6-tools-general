@@ -6,9 +6,13 @@ File organisation:
 - Core utility functions (safe_log, safe_calculate)
 - Data handling utilities (collect_organisation_ids)
 - Data transformation functions (apply_data_stratification, set_datatypes)
+- DataFrame accessor for storing and retrieving predetermined information and/or statistics (PredeterminedInfoAccessor)
 ------------------------------------------------------------------------------
 """
+import json
+
 import pandas as pd
+
 from typing import Any, Callable, Dict, List, Optional, Union, TypeVar, cast
 
 from vantage6.algorithm.tools.util import info, warn, error
@@ -159,7 +163,7 @@ def apply_data_stratification(df: pd.DataFrame,
             elif end is not None:
                 query_conditions.append(f"`{variable}` <= {end}")
         else:
-            # Handle list of values
+            # Handle the list of values
             query_conditions.append(f"`{variable}` in {values}")
 
     query_string = " and ".join(query_conditions)
@@ -218,3 +222,212 @@ def set_datatypes(df: pd.DataFrame,
             else:
                 safe_log("error", f"Unknown datatype '{datatype}' for variable '{variable}'")
     return df
+
+
+@pd.api.extensions.register_dataframe_accessor("predetermined_info")
+class PredeterminedInfoAccessor:
+    """
+    A pandas DataFrame accessor for managing and storing predetermined information and statistics.
+
+    This accessor provides methods to store, retrieve, and update statistical information
+    about the DataFrame or its columns. It handles both single values and per-column statistics,
+    with built-in safety measures for calculations and logging.
+
+    The accessor stores all information in the DataFrame's attrs, making it persistent
+    with the DataFrame. Each statistic includes metadata such as timestamp and user information.
+
+    This can, for example, be used to address issues as one-to-many relationships skewing missing data computation.
+    """
+
+    def __init__(self, pandas_obj):
+        """
+        Initialise the PredeterminedInfoAccessor.
+
+        Args:
+            pandas_obj (pd.DataFrame): The DataFrame this accessor is attached to
+        """
+        self._obj = pandas_obj
+        self._initialized = False
+
+    def _check_initialized(self) -> None:
+        """
+        Initialize the storage if not already done.
+
+        Ensures the DataFrame has the necessary attribute storage structure.
+        """
+        if not self._initialized:
+            if 'stats' not in self._obj.attrs:
+                self._obj.attrs['stats'] = {}
+            self._initialized = True
+
+    def add_stat(self,
+                 stat_name: str,
+                 calculation_func: Optional[callable] = None,
+                 value: Any = None,
+                 per_column: bool = False,
+                 store_output_index: int = None,
+                 update_with_output_index: int = None,
+                 **kwargs) -> None:
+        """
+        Add a custom statistic to the DataFrame.
+
+        Args:
+            stat_name (str): Name of the statistic to store
+            calculation_func (Optional[callable]): Function to calculate the statistic
+            value (Any, optional): Direct value to store if not using calculation_func
+            per_column (bool): If True, calculate/store the stat for each column separately
+            store_output_index (int, optional): If function returns tuple, index of value to store
+            update_with_output_index (int, optional): If function returns tuple, index to update DataFrame
+            **kwargs: Additional arguments to pass to calculation_func
+
+        Raises:
+            ValueError: If the value is not JSON serialisable
+        """
+        self._check_initialized()
+        safe_log("info", f"Adding predetermined information '{stat_name}' to DataFrame attributes")
+
+        if value is None and calculation_func is not None:
+            if per_column:
+                value = {}
+                updated_columns = {}
+                for col in self._obj.columns:
+                    def calculate_for_column(**kwargs):
+                        result = calculation_func(self._obj[col], **kwargs)
+                        if isinstance(result, tuple):
+                            stat_value = result[store_output_index] if store_output_index is not None else result[0]
+                            if update_with_output_index is not None:
+                                updated_columns[col] = result[update_with_output_index]
+                            return stat_value
+                        return result
+
+                    value[col] = safe_calculate(
+                        calculate_for_column,
+                        default_value=None,
+                        **kwargs
+                    )
+
+                if updated_columns:
+                    for col, series in updated_columns.items():
+                        self._obj[col] = series
+                    safe_log("info", f"Updated {len(updated_columns)} columns with new values")
+            else:
+                def calculate_for_df(**kwargs):
+                    result = calculation_func(self._obj, **kwargs)
+                    if isinstance(result, tuple):
+                        return result[store_output_index] if store_output_index is not None else result[0]
+                    return result
+
+                value = safe_calculate(
+                    calculate_for_df,
+                    default_value=None,
+                    **kwargs
+                )
+
+        try:
+            json.dumps(value)
+        except TypeError:
+            safe_log("error", f"Value for information '{stat_name}' must be JSON serializable")
+            raise ValueError(f"Value for {stat_name} must be JSON serializable")
+
+        self._obj.attrs['stats'][stat_name] = {
+            'value': value,
+            'per_column': per_column
+        }
+        safe_log("info", f"Successfully added information on '{stat_name}'")
+
+    def get_stat(self, stat_name: str, column: str = None) -> Any:
+        """
+        Retrieve a stored statistic.
+
+        Args:
+            stat_name (str): Name of the statistic to retrieve
+            column (str, optional): If the stat is per-column, specify which column to get
+
+        Returns:
+            Any: The stored statistic value
+
+        Raises:
+            KeyError: If statistic not found
+        """
+        if stat_name not in self._obj.attrs['stats']:
+            safe_log("error", f"Statistic '{stat_name}' not found")
+            raise KeyError(f"Statistic '{stat_name}' not found")
+
+        stat = self._obj.attrs['stats'][stat_name]
+
+        if stat['per_column']:
+            if column is None:
+                safe_log("info", f"Retrieving predetermined '{stat_name}' for all columns")
+                return stat['value']
+            safe_log("info", f"Retrieving predetermined '{stat_name}' for column '{column}'")
+            return stat['value'].get(column)
+
+        safe_log("info", f"Retrieving predetermined information on '{stat_name}'")
+        return stat['value']
+
+    def get_column_stats(self, column: str) -> Dict[str, Any]:
+        """
+        Retrieve all stored statistics for a specific column.
+
+        Args:
+            column (str): Name of the column to get statistics for
+
+        Returns:
+            Dict[str, Any]: Dictionary containing all statistics for the column
+
+        Raises:
+            KeyError: If column not found in DataFrame
+        """
+        if column not in self._obj.columns:
+            safe_log("error", f"Column '{column}' not found in DataFrame")
+            raise KeyError(f"Column '{column}' not found in DataFrame")
+
+        safe_log("info", f"Retrieving all statistics for column '{column}'")
+
+        column_stats = {}
+        for stat_name, stat_info in self._obj.attrs.get('stats', {}).items():
+            if stat_info['per_column']:
+                if column in stat_info['value']:
+                    column_stats[stat_name] = stat_info['value'][column]
+
+        stats_count = len(column_stats)
+        if stats_count == 0:
+            safe_log("info", f"No statistics found for column '{column}'")
+        elif stats_count <= 2:
+            safe_log("warn", "For only 1-2 statistics, consider using get_stat() directly")
+        else:
+            safe_log("info", f"Retrieved {stats_count} statistics efficiently")
+
+        return column_stats
+
+    def list_stats(self) -> Dict:
+        """
+        List all stored statistics.
+
+        Returns:
+            Dict: Dictionary of stored statistics
+        """
+        safe_log("info", "Listing all available predetermined information")
+        return self._obj.attrs.get('stats', {})
+
+    def update_stat(self, stat_name: str, **kwargs) -> None:
+        """
+        Update a specific statistic.
+
+        Args:
+            stat_name (str): Name of the statistic to update
+            **kwargs: Arguments to pass to calculation function
+
+        Raises:
+            KeyError: If statistic not found
+        """
+        if stat_name not in self._obj.attrs['stats']:
+            safe_log("error", f"Cannot update: predetermined information on '{stat_name}' not found")
+            raise KeyError(f"Predetermined information '{stat_name}' not found")
+
+        safe_log("info", f"Updating information on '{stat_name}'")
+        current_stat = self._obj.attrs['stats'][stat_name]
+        self.add_stat(stat_name,
+                      calculation_func=current_stat.get('calculation_func'),
+                      per_column=current_stat['per_column'],
+                      **kwargs)
