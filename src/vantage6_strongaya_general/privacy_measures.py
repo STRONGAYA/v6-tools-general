@@ -1003,17 +1003,16 @@ def apply_differential_privacy(df: pd.DataFrame,
     If the privacy budget is exceeded during processing, the function will stop applying
     differential privacy to new variables, but will return the results for variables already processed.
 
-     Security Notice:
-    ---------------
-    This implementation uses deterministic noise generation based on query parameters,
-    which ensures that identical queries will always produce identical results,
-    even across different sessions. This decreases the risk of multiple-query averaging attacks
-    while maintaining differential privacy guarantees.
+    Warnings:
+        This implementation uses deterministic noise generation based on query parameters,
+        which ensures that identical queries will always produce identical results,
+        even across different sessions. This decreases the risk of multiple-query averaging attacks
+        while maintaining differential privacy guarantees.
 
-    For maximum security, consider fixing the epsilon value in your application rather than
-    allowing users to specify it directly. Variable epsilon values could enable reconstruction
-    attacks over time if an adversary can make multiple similar queries with different
-    epsilon values.
+        For maximum security, consider fixing the epsilon value in your application rather than
+        allowing users to specify it directly. Variable epsilon values could enable reconstruction
+        attacks over time if an adversary can make multiple similar queries with different
+        epsilon values.
 
     Args:
         df (pd.DataFrame): The input DataFrame.
@@ -1044,19 +1043,20 @@ def apply_differential_privacy(df: pd.DataFrame,
     Returns:
         Union[Dict[str, Any], pd.DataFrame]: Either detailed results or a DataFrame with DP results.
 
-    Mechanism Comparison:
-    | Mechanism | Privacy Guarantee | Parameters | Best For | Noise Distribution |
-    |-----------|------------------|------------|----------|-------------------|
-    | Laplace   | ε-DP (pure)      | ε only     | Medical data, simple queries | Sharper peak, heavier tails |
-    | Gaussian  | (ε,δ)-DP (approx)| ε and δ    | Complex analytics, high dimensions | Bell curve, lighter tails |
+    Notes
+        Mechanism Comparison:
+        | Mechanism | Privacy Guarantee | Parameters | Best For | Noise Distribution |
+        |-----------|------------------|------------|----------|-------------------|
+        | Laplace   | ε-DP (pure)      | ε only     | Medical data, simple queries | Sharper peak, heavier tails |
+        | Gaussian  | (ε,δ)-DP (approx)| ε and δ    | Complex analytics, high dimensions | Bell curve, lighter tails |
 
-    Epsilon Value Trade-offs:
-    | Epsilon Value | Privacy Protection | Result Accuracy | Typical Use Case |
-    |---------------|-------------------|----------------|------------------|
-    | 0.01 - 0.1    | Very Strong       | Low            | Highly sensitive data (HIV status, etc.) |
-    | 0.1 - 1.0     | Strong            | Moderate       | Medical data, survey responses |
-    | 1.0 - 10.0    | Moderate          | High           | Less sensitive aggregate statistics |
-    | > 10.0        | Weak              | Very High      | Public or less sensitive data |
+        Epsilon Value Trade-offs:
+        | Epsilon Value | Privacy Protection | Result Accuracy | Typical Use Case |
+        |---------------|-------------------|----------------|------------------|
+        | 0.01 - 0.1    | Very Strong       | Low            | Highly sensitive data (HIV status, etc.) |
+        | 0.1 - 1.0     | Strong            | Moderate       | Medical data, survey responses |
+        | 1.0 - 10.0    | Moderate          | High           | Less sensitive aggregate statistics |
+        | > 10.0        | Weak              | Very High      | Public or less sensitive data |
 
     Example:
         # Get detailed results with Laplace mechanism (default)

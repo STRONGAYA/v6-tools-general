@@ -13,16 +13,15 @@ import json
 
 import pandas as pd
 
-from typing import Any, Callable, Dict, List, Optional, Union, TypeVar, cast
+from typing import Any, Callable, cast, Dict, List, Optional, Union, Tuple, TypeVar
 
-from vantage6.algorithm.tools.exceptions import AlgorithmError, InputError, CollectOrganizationError
+from vantage6.algorithm.tools.exceptions import AlgorithmError, CollectOrganizationError, DataError, InputError
 from vantage6.algorithm.tools.util import info, warn, error
 from vantage6.algorithm.client import AlgorithmClient
 
 
-def apply_data_stratification(df: pd.DataFrame,
-                              variables_to_stratify: Optional[
-                                  Dict[str, Union[List[str], Dict[str, Union[int, float]]]]]) -> pd.DataFrame:
+def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
+    Dict[str, Union[List[str], Dict[str, Union[int, float]]]]]) -> pd.DataFrame:
     """
     Stratify the DataFrame based on the specified variables.
 
@@ -174,8 +173,7 @@ def safe_calculate(calculation_func: Callable[..., T], default_value: T = None, 
         return cast(T, default_value)
 
 
-def set_datatypes(df: pd.DataFrame,
-                  variable_details: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
+def set_datatypes(df: pd.DataFrame, variable_details: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
     """
     Set the datatypes for each variable in the DataFrame based on the provided details.
 
@@ -220,7 +218,60 @@ def set_datatypes(df: pd.DataFrame,
                     safe_log("warn", f"Unexpected values detected in categorical variable '{variable}',"
                                      f"coercing outliers to missing values")
             else:
-                safe_log("error", f"Unknown datatype '{datatype}' for variable '{variable}'")
+                raise InputError(f"Unknown datatype '{datatype}' for variable '{variable}'")
+    return df
+
+
+def sum_variables(df: pd.DataFrame, variables: List[str], new_variable_name: str,
+                  check_range: Tuple[float, float] = None, required_items: int = None, strict: bool = True) -> pd.DataFrame:
+    """
+    Sum the specified variables in the DataFrame and create a new variable with the result.
+
+    Warnings
+        Setting the 'strict' parameter to False can use invalid data if adhering to a standardised scoring system
+        and consequently skew the output.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to be modified.
+        variables (List[str]): List of variable names to sum.
+        new_variable_name (str): Name of the new variable to store the sum.
+        check_range (tuple[float, float], optional): Expected range for individual items (min, max).
+        required_items (int, optional): Number of items required for valid score calculation.
+        strict (bool): If True, raises errors for invalid data. If False, logs warnings (default: True).
+
+
+    Returns:
+        pd.DataFrame: The DataFrame with the new summed variable.
+    """
+    # Validate input ranges if specified
+    if check_range is not None:
+        min_val, max_val = check_range
+        for var in variables:
+            invalid_values = ~df[var].between(min_val, max_val)
+            if invalid_values.any():
+                error_msg = (f"Values in {var} outside expected range [{min_val}, {max_val}]. "
+                             f"Found invalid values in rows: {df.index[invalid_values].tolist()}")
+                if strict:
+                    raise DataError(error_msg)
+                else:
+                    safe_log("warning", error_msg)
+
+    # Check for missing values
+    missing_count = df[variables].isnull().sum(axis=1)
+    if required_items is not None:
+        invalid_rows = (len(variables) - missing_count) < required_items
+        if invalid_rows.any():
+            error_msg = (f"Insufficient valid responses for {new_variable_name}. "
+                         f"Required: {required_items}, Found invalid rows: {df.index[invalid_rows].tolist()}")
+            if strict:
+                raise DataError(error_msg)
+            else:
+                safe_log("warning", error_msg)
+
+    # Calculate sum
+    safe_log("info", f"Summing variables {variables} into '{new_variable_name}'")
+    df[new_variable_name] = df[variables].sum(axis=1)
+
     return df
 
 
