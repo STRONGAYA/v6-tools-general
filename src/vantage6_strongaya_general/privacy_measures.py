@@ -11,13 +11,15 @@ File organisation:
 ------------------------------------------------------------------------------
 """
 
+import json
 import math
 import random
+import hashlib
 
 import pandas as pd
 import numpy as np
 
-from typing import Union, List, Dict, Any, Optional, Literal
+from typing import Any, Dict, List, Literal, Optional, Union, Tuple
 from datetime import timedelta
 
 from vantage6.algorithm.tools.util import get_env_var
@@ -194,30 +196,100 @@ def _get_gaussian_noise_scale(sensitivity: float, delta: float, epsilon: float) 
     return sensitivity * math.sqrt(2 * math.log(1.25 / delta)) / epsilon
 
 
+def _generate_query_seed(
+        df_shape: Tuple[int, int],
+        variable: str,
+        epsilon: float,
+        delta: float,
+        distribution: str,
+        operation: str = None,
+        **kwargs
+) -> int:
+    """
+    Generate a deterministic seed for noise generation based on query parameters.
+
+    This function creates a consistent seed value that depends only on the query parameters,
+    ensuring that identical queries always produce identical noise values, even across
+    different sessions or algorithm runs.
+
+    Args:
+        df_shape: Shape of the input DataFrame (rows, columns)
+        variable: Variable to apply DP to
+        epsilon: Privacy parameter
+        delta: Failure probability parameter
+        distribution: Noise distribution mechanism
+        operation: Statistical operation (for numerical data)
+        **kwargs: Additional parameters affecting the result
+
+    Returns:
+        int: A deterministic seed value for the random number generator
+    """
+    # Create a dictionary of all query parameters
+    query_dict = {
+        "df_shape": df_shape,
+        "variable": variable,
+        "epsilon": epsilon,
+        "delta": delta,
+        "distribution": distribution
+    }
+
+    # Add operation if provided (for numerical data)
+    if operation:
+        query_dict["operation"] = operation
+
+    # Add additional parameters that affect query results
+    for param in ["top_k", "bin_count"]:
+        if param in kwargs:
+            query_dict[param] = kwargs[param]
+
+    # Convert to JSON string and hash
+    query_json = json.dumps(query_dict, sort_keys=True)
+    hash_value = hashlib.sha256(query_json.encode()).hexdigest()
+
+    # Convert hash to integer for seed (modulo to prevent overflow)
+    return int(hash_value, 16) % (2 ** 32 - 1)
+
+
 def _generate_noise(
         sensitivity: float,
         epsilon: float,
         delta: float = 1e-5,
-        distribution: NoiseDistribution = "laplace"
+        distribution: NoiseDistribution = "laplace",
+        seed: Optional[int] = None
 ) -> float:
     """
     Generate noise based on the chosen differential privacy mechanism.
+
+    Using a consistent seed ensures the same query always produces the same noise,
+    preventing multiple query averaging attacks while maintaining privacy guarantees.
 
     Args:
         sensitivity (float): The sensitivity of the query.
         epsilon (float): The privacy parameter (smaller means more privacy).
         delta (float): The failure probability parameter (used only for Gaussian).
-        distribution (NoiseDistribution): The DP mechanism to use.
+        distribution (NoiseDistribution): The DP mechanism to use:
+            - 'laplace': Provides pure ε-differential privacy
+            - 'gaussian': Provides (ε,δ)-differential privacy
+        seed (Optional[int]): Seed for the random number generator, used for deterministic noise.
+            If provided, the same seed will always produce the same noise value.
 
     Returns:
         float: A noise value from the appropriate distribution.
     """
+    # Create a deterministic RNG if seed is provided
+    if seed is not None:
+        # Create a separate random number generator that won't affect other code
+        rng = np.random.RandomState(seed)
+    else:
+        # Use the global RNG if no seed (less secure but maintains backwards compatibility)
+        rng = np.random
+
     if distribution == "laplace":
         scale = _get_laplace_scale(sensitivity, epsilon)
-        return np.random.laplace(0, scale)
+        return rng.laplace(0, scale)
     else:  # gaussian
         sigma = _get_gaussian_noise_scale(sensitivity, delta, epsilon)
-        return np.random.normal(0, sigma)
+        return rng.normal(0, sigma)
 
 
 def _sanitise_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
@@ -323,6 +395,9 @@ def _apply_dp_to_categorical(df: pd.DataFrame,
     """
     Apply differential privacy to categorical data by adding noise to category counts.
 
+    Uses deterministic noise generation to ensure consistent results for identical queries,
+    protecting against multiple-query averaging attacks.
+
     Args:
         df (pd.DataFrame): The input DataFrame.
         column_name (str): The column with categorical data.
@@ -358,11 +433,22 @@ def _apply_dp_to_categorical(df: pd.DataFrame,
     else:
         noise_scale = _get_gaussian_noise_scale(sensitivity, delta, epsilon)
 
+    # Generate base seed for this query
+    base_seed = _generate_query_seed(
+        df_shape=df.shape,
+        variable=column_name,
+        epsilon=epsilon,
+        delta=delta,
+        distribution=distribution
+    )
+
     # Add noise to each category count
     private_counts: Dict[Any, int] = {}
-    for category, count in value_counts.items():
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution)
-        # Round to nearest non-negative integer
+    for i, (category, count) in enumerate(value_counts.items()):
+        # Create a unique seed for each category by combining the base seed with category index
+        category_seed = base_seed + i
+        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=category_seed)
+        # Round to the nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[category] = private_count
 
@@ -395,6 +481,9 @@ def _apply_dp_to_boolean(df: pd.DataFrame,
     """
     Apply differential privacy to boolean data by treating it as a special case of categorical.
 
+    Uses deterministic noise generation to ensure consistent results for identical queries,
+    protecting against multiple-query averaging attacks.
+
     Args:
         df (pd.DataFrame): The input DataFrame.
         column_name (str): The column with boolean data.
@@ -426,10 +515,21 @@ def _apply_dp_to_boolean(df: pd.DataFrame,
     else:
         noise_scale = _get_gaussian_noise_scale(sensitivity, delta, epsilon)
 
+    # Generate base seed for this query
+    base_seed = _generate_query_seed(
+        df_shape=df.shape,
+        variable=column_name,
+        epsilon=epsilon,
+        delta=delta,
+        distribution=distribution
+    )
+
     # Add noise to each category count
     private_counts: Dict[bool, int] = {}
-    for category, count in value_counts.items():
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution)
+    for i, (category, count) in enumerate(value_counts.items()):
+        # Create a unique seed for each category
+        category_seed = base_seed + i
+        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=category_seed)
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[category] = private_count
@@ -463,6 +563,9 @@ def _apply_dp_to_string(df: pd.DataFrame,
     """
     Apply differential privacy to string data by reporting noisy counts of top values.
 
+    Uses deterministic noise generation to ensure consistent results for identical queries,
+    protecting against multiple-query averaging attacks.
+
     Args:
         df (pd.DataFrame): The input DataFrame.
         column_name (str): The column with string data.
@@ -491,10 +594,22 @@ def _apply_dp_to_string(df: pd.DataFrame,
     else:
         noise_scale = _get_gaussian_noise_scale(sensitivity, delta, epsilon)
 
+    # Generate base seed for this query
+    base_seed = _generate_query_seed(
+        df_shape=df.shape,
+        variable=column_name,
+        epsilon=epsilon,
+        delta=delta,
+        distribution=distribution,
+        top_k=top_k
+    )
+
     # Add noise to each category count
     private_counts: Dict[str, int] = {}
-    for category, count in top_values_dict.items():
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution)
+    for i, (category, count) in enumerate(top_values_dict.items()):
+        # Create a unique seed for each category
+        category_seed = base_seed + i
+        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=category_seed)
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[category] = private_count
@@ -529,6 +644,9 @@ def _apply_dp_to_datetime(df: pd.DataFrame,
                           distribution: NoiseDistribution = "laplace") -> Dict[str, Any]:
     """
     Apply differential privacy to datetime data by binning and adding noise to bin counts.
+
+    Uses deterministic noise generation to ensure consistent results for identical queries,
+    protecting against multiple-query averaging attacks.
 
     Args:
         df (pd.DataFrame): The input DataFrame.
@@ -584,10 +702,22 @@ def _apply_dp_to_datetime(df: pd.DataFrame,
     else:
         noise_scale = _get_gaussian_noise_scale(sensitivity, delta, epsilon)
 
+    # Generate base seed for this query
+    base_seed = _generate_query_seed(
+        df_shape=df.shape,
+        variable=column_name,
+        epsilon=epsilon,
+        delta=delta,
+        distribution=distribution,
+        bin_count=bin_count
+    )
+
     # Add noise to each bin count
     private_counts: Dict[str, int] = {}
-    for bin_label, count in count_dict.items():
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution)
+    for i, (bin_label, count) in enumerate(count_dict.items()):
+        # Create a unique seed for each bin
+        bin_seed = base_seed + i
+        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=bin_seed)
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[bin_label] = private_count
@@ -623,6 +753,9 @@ def _apply_dp_to_timedelta(df: pd.DataFrame,
                            distribution: NoiseDistribution = "laplace") -> Dict[str, Any]:
     """
     Apply differential privacy to timedelta data by binning and adding noise to bin counts.
+
+    Uses deterministic noise generation to ensure consistent results for identical queries,
+    protecting against multiple-query averaging attacks.
 
     Args:
         df (pd.DataFrame): The input DataFrame.
@@ -688,10 +821,22 @@ def _apply_dp_to_timedelta(df: pd.DataFrame,
     else:
         noise_scale = _get_gaussian_noise_scale(sensitivity, delta, epsilon)
 
+    # Generate base seed for this query
+    base_seed = _generate_query_seed(
+        df_shape=df.shape,
+        variable=column_name,
+        epsilon=epsilon,
+        delta=delta,
+        distribution=distribution,
+        bin_count=bin_count
+    )
+
     # Add noise to each bin count
     private_counts: Dict[str, int] = {}
-    for bin_label, count in count_dict.items():
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution)
+    for i, (bin_label, count) in enumerate(count_dict.items()):
+        # Create a unique seed for each bin
+        bin_seed = base_seed + i
+        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=bin_seed)
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[bin_label] = private_count
@@ -857,6 +1002,18 @@ def apply_differential_privacy(df: pd.DataFrame,
     If the privacy budget is exceeded during processing, the function will stop applying
     differential privacy to new variables, but will return the results for variables already processed.
 
+     Security Notice:
+    ---------------
+    This implementation uses deterministic noise generation based on query parameters,
+    which ensures that identical queries will always produce identical results,
+    even across different sessions. This decreases the risk of multiple-query averaging attacks
+    while maintaining differential privacy guarantees.
+
+    For maximum security, consider fixing the epsilon value in your application rather than
+    allowing users to specify it directly. Variable epsilon values could enable reconstruction
+    attacks over time if an adversary can make multiple similar queries with different
+    epsilon values.
+
     Args:
         df (pd.DataFrame): The input DataFrame.
         variables (Union[str, List[str]]): Column name(s) to apply differential privacy to.
@@ -970,7 +1127,7 @@ def apply_differential_privacy(df: pd.DataFrame,
 
         # Safely determine data type and apply appropriate DP mechanism
         try:
-            if pd.api.types.is_categorical_dtype(df[variable]) or hasattr(df[variable].dtype, 'categories'):
+            if isinstance(df[variable].dtype, pd.CategoricalDtype) or hasattr(df[variable].dtype, 'categories'):
                 # Categorical data
                 safe_log("info", f"Applying categorical differential privacy to {variable}")
                 results[variable] = _apply_dp_to_categorical(
@@ -1028,8 +1185,24 @@ def apply_differential_privacy(df: pd.DataFrame,
                     operation=operation
                 )
 
-                # Generate noise using the selected distribution
-                noise = _generate_noise(sensitivity, epsilon_per_variable, delta, distribution)
+                # Generate deterministic seed for this query
+                query_seed = _generate_query_seed(
+                    df_shape=df.shape,
+                    variable=variable,
+                    epsilon=epsilon_per_variable,
+                    delta=delta,
+                    distribution=distribution,
+                    operation=operation
+                )
+
+                # Generate noise using the selected distribution with deterministic seed
+                noise = _generate_noise(
+                    sensitivity,
+                    epsilon_per_variable,
+                    delta,
+                    distribution,
+                    seed=query_seed
+                )
                 private_result = true_result + noise
 
                 # Get noise scale for metadata
@@ -1084,7 +1257,7 @@ def apply_differential_privacy(df: pd.DataFrame,
         "total_processed": len(processed_variables),
         "total_skipped": len(skipped_variables),
         "randomised_order": randomize_order,
-        "distribution": distribution  # Add the used distribution to the processing summary
+        "distribution": distribution
     }
 
     # If no variables were processed, warn the user
