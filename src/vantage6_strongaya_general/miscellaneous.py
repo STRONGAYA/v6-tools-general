@@ -15,102 +15,9 @@ import pandas as pd
 
 from typing import Any, Callable, Dict, List, Optional, Union, TypeVar, cast
 
-from vantage6.algorithm.tools.exceptions import AlgorithmError, InputError
+from vantage6.algorithm.tools.exceptions import AlgorithmError, InputError, CollectOrganizationError
 from vantage6.algorithm.tools.util import info, warn, error
 from vantage6.algorithm.client import AlgorithmClient
-
-
-def safe_log(level: str, message: str, variables: Optional[List[str]] = None) -> None:
-    """
-    Safely log messages without leaking sensitive data.
-
-    Args:
-        level (str): Log level ('info', 'warn', 'error')
-        message (str): Message to log
-        variables (Optional[List[str]]): List of variable names that are safe to include
-    """
-    # Only allow specific variable names to be logged, not values
-    if variables:
-        # If more than 5 variables, truncate the list to prevent data mining
-        if len(variables) > 5:
-            var_str = ", ".join(variables[:5]) + f" and {len(variables) - 5} more"
-        else:
-            var_str = ", ".join(variables)
-
-        message = message.replace("{variables}", var_str)
-
-    # Ensure that the message ends with a period if proper punctuation is not yet present
-    if not message.endswith('.') and not message.endswith('?') and not message.endswith('!'):
-        message += '.'
-
-    # Call appropriate log function
-    if level == "info":
-        info(message)
-    elif level == "warn":
-        warn(message)
-    elif level == "error":
-        error(message)
-
-
-T = TypeVar('T')  # Define a type variable for the return type
-
-
-def safe_calculate(calculation_func: Callable[..., T], default_value: T = None, **kwargs: Any) -> T:
-    """
-    Safely execute a calculation without leaking data in exceptions.
-
-    Args:
-        calculation_func (Callable[..., T]): Function to execute
-        default_value (T): Value to return if calculation fails
-        **kwargs: Arguments to pass to calculation_func
-
-    Returns:
-        T: Result of calculation_func or default_value if it fails
-    """
-    try:
-        return calculation_func(**kwargs)
-    except Exception as e:
-        # Log generic error without data details
-        safe_log("warn", f"Calculation error: {type(e).__name__}. Using default value")
-        return cast(T, default_value)
-
-
-def collect_organisation_ids(organisation_ids: Optional[List[int]], client: AlgorithmClient) -> List[int]:
-    """
-    Collect organisation IDs, ensuring they are a list of integers.
-    If the input is not a list of integers, attempt to convert it.
-    If the input is None, collect all organisation IDs.
-
-    Args:
-        organisation_ids (Optional[List[int]]): List of organisation IDs.
-        client (AlgorithmClient): The client object to interact with the organisation API.
-
-    Returns:
-        List[int]: A list of valid organisation IDs.
-    """
-    if organisation_ids is None:
-        safe_log("info", "No organisation IDs provided. Collecting all organisation IDs")
-        organisations = client.organization.list()
-        return [organisation.get("id") for organisation in organisations]
-
-    if isinstance(organisation_ids, list):
-        try:
-            # Attempt to convert all elements to integers
-            organisation_ids = [int(i) for i in organisation_ids]
-        except ValueError:
-            safe_log("error", "Organisation IDs should be a list of integers")
-            return []
-
-        # Check if the organisation IDs are valid
-        for org_id in organisation_ids:
-            if not client.organization.get(org_id):
-                safe_log("error", f"Organisation ID {org_id} is not valid")
-                return []
-
-        return organisation_ids
-    else:
-        safe_log("error", "Organisation IDs should be a list of integers")
-        return []
 
 
 def apply_data_stratification(df: pd.DataFrame,
@@ -173,6 +80,98 @@ def apply_data_stratification(df: pd.DataFrame,
     stratified_df = df.query(query_string)
 
     return stratified_df.reset_index(drop=True)
+
+
+def collect_organisation_ids(organisation_ids: Optional[List[int]], client: AlgorithmClient) -> List[int]:
+    """
+    Collect organisation IDs, ensuring they are a list of integers.
+    If the input is not a list of integers, attempt to convert it.
+    If the input is None, collect all organisation IDs.
+
+    Args:
+        organisation_ids (Optional[List[int]]): List of organisation IDs.
+        client (AlgorithmClient): The client object to interact with the organisation API.
+
+    Returns:
+        List[int]: A list of valid organisation IDs.
+    """
+    if organisation_ids is None:
+        safe_log("info", "No organisation IDs provided. Collecting all organisation IDs")
+        organisations = client.organization.list()
+        return [organisation.get("id") for organisation in organisations]
+
+    if isinstance(organisation_ids, list):
+        try:
+            # Attempt to convert all elements to integers
+            organisation_ids = [int(i) for i in organisation_ids]
+        except ValueError:
+            safe_log("error", "Organisation IDs should be a list of integers")
+            return []
+
+        # Check if the organisation IDs are valid
+        for org_id in organisation_ids:
+            if not client.organization.get(org_id):
+                raise CollectOrganizationError(f"Organisation ID {org_id} is not valid")
+
+        return organisation_ids
+    else:
+        safe_log("error", "Organisation IDs should be a list of integers")
+        return []
+
+
+def safe_log(level: str, message: str, variables: Optional[List[str]] = None) -> None:
+    """
+    Safely log messages without leaking sensitive data.
+
+    Args:
+        level (str): Log level ('info', 'warn', 'error')
+        message (str): Message to log
+        variables (Optional[List[str]]): List of variable names that are safe to include
+    """
+    # Only allow specific variable names to be logged, not values
+    if variables:
+        # If more than 5 variables, truncate the list to prevent data mining
+        if len(variables) > 5:
+            var_str = ", ".join(variables[:5]) + f" and {len(variables) - 5} more"
+        else:
+            var_str = ", ".join(variables)
+
+        message = message.replace("{variables}", var_str)
+
+    # Ensure that the message ends with a period if proper punctuation is not yet present
+    if not message.endswith('.') and not message.endswith('?') and not message.endswith('!'):
+        message += '.'
+
+    # Call appropriate log function
+    if level == "info":
+        info(message)
+    elif level == "warn":
+        warn(message)
+    elif level == "error":
+        error(message)
+
+
+T = TypeVar('T')  # Define a type variable for the return type
+
+
+def safe_calculate(calculation_func: Callable[..., T], default_value: T = None, **kwargs: Any) -> T:
+    """
+    Safely execute a calculation without leaking data in exceptions.
+
+    Args:
+        calculation_func (Callable[..., T]): Function to execute
+        default_value (T): Value to return if calculation fails
+        **kwargs: Arguments to pass to calculation_func
+
+    Returns:
+        T: Result of calculation_func or default_value if it fails
+    """
+    try:
+        return calculation_func(**kwargs)
+    except Exception as e:
+        # Log generic error without data details
+        safe_log("warn", f"Calculation error: {type(e).__name__}. Using default value")
+        return cast(T, default_value)
 
 
 def set_datatypes(df: pd.DataFrame,
