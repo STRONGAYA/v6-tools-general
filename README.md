@@ -31,7 +31,7 @@ algorithm.
 For the `requirements.txt` file, you can add the following line to the file:
 
 ```
-git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.1
+git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.2
 ```
 
 For the `setup.py` file, you can add the following line to the `install_requires` list:
@@ -58,7 +58,7 @@ setup(
         'vantage6-algorithm-tools',
         'numpy',
         'pandas',
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.1",
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.2",
     # other dependencies
     ]
 )
