@@ -22,6 +22,7 @@ import numpy as np
 from typing import Any, Dict, List, Literal, Optional, Union, Tuple
 from datetime import timedelta
 
+from vantage6.algorithm.tools.exceptions import InputError, PrivacyThresholdViolation
 from vantage6.algorithm.tools.util import get_env_var
 from vantage6.algorithm.client import AlgorithmClient
 
@@ -82,9 +83,9 @@ def apply_sample_size_threshold(client: AlgorithmClient, df: pd.DataFrame,
 
     # Check if the DataFrame is empty
     if len(df) <= sample_size_threshold:
-        safe_log("warn",
-                 f"Sub-task was not executed because the number of samples is too small (n <= {sample_size_threshold})")
-        return {"N-Threshold not met": client.organization_id}
+        raise PrivacyThresholdViolation(
+            f"Sub-task was not executed because the number of samples in organisation with id '{client.organization_id}' "
+            f"is too small (n <= {sample_size_threshold}).")
 
     # Check if there are enough datapoints
     for variable in variables_to_check:
@@ -1174,7 +1175,7 @@ def apply_differential_privacy(df: pd.DataFrame,
                 elif operation == 'count':
                     true_result = safe_calculate(lambda: df[variable].count(), default_value=0)
                 else:
-                    raise ValueError(f"Unsupported operation: {operation}")
+                    raise InputError(f"Unsupported operation: {operation}")
 
                 # Calculate sensitivity based on operation and data
                 sensitivity = safe_calculate(

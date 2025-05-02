@@ -15,6 +15,7 @@ import pandas as pd
 
 from typing import Any, Callable, Dict, List, Optional, Union, TypeVar, cast
 
+from vantage6.algorithm.tools.exceptions import AlgorithmError, InputError
 from vantage6.algorithm.tools.util import info, warn, error
 from vantage6.algorithm.client import AlgorithmClient
 
@@ -327,7 +328,7 @@ class PredeterminedInfoAccessor:
             json.dumps(value)
         except TypeError:
             safe_log("error", f"Value for information '{stat_name}' must be JSON serializable")
-            raise ValueError(f"Value for {stat_name} must be JSON serializable")
+            raise AlgorithmError(f"Value for {stat_name} must be JSON serializable")
 
         self._obj.attrs['stats'][stat_name] = {
             'value': value,
@@ -351,7 +352,7 @@ class PredeterminedInfoAccessor:
         """
         if stat_name not in self._obj.attrs['stats']:
             safe_log("error", f"Statistic '{stat_name}' not found")
-            raise KeyError(f"Statistic '{stat_name}' not found")
+            raise InputError(f"Statistic '{stat_name}' not found")
 
         stat = self._obj.attrs['stats'][stat_name]
 
@@ -380,7 +381,7 @@ class PredeterminedInfoAccessor:
         """
         if column not in self._obj.columns:
             safe_log("error", f"Column '{column}' not found in DataFrame")
-            raise KeyError(f"Column '{column}' not found in DataFrame")
+            raise InputError(f"Column '{column}' not found in DataFrame")
 
         safe_log("info", f"Retrieving all statistics for column '{column}'")
 
@@ -423,7 +424,7 @@ class PredeterminedInfoAccessor:
         """
         if stat_name not in self._obj.attrs['stats']:
             safe_log("error", f"Cannot update: predetermined information on '{stat_name}' not found")
-            raise KeyError(f"Predetermined information '{stat_name}' not found")
+            raise InputError(f"Predetermined information '{stat_name}' not found")
 
         safe_log("info", f"Updating information on '{stat_name}'")
         current_stat = self._obj.attrs['stats'][stat_name]
