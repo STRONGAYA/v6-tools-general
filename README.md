@@ -187,9 +187,9 @@ pip install git+https://github.com/STRONGAYA/v6-tools-general.git
 
 # Contributers
 
-- [@JHogenboom]
-- [@VarshaGouthamchand]
-- [@aiaragomes]
+- J. Hogenboom
+- V. Gouthamchand
+- A. Lobo Gomes
 
 # References
 
