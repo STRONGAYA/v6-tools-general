@@ -15,6 +15,7 @@ import pandas as pd
 from typing import Any, Dict, List,Optional, Tuple, Union
 
 from io import StringIO as stringIO
+from vantage6.algorithm.tools.exceptions import InputError
 
 # Import safe logging and calculation functions from misc
 from .miscellaneous import safe_log, safe_calculate
@@ -263,7 +264,7 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
         if has_predetermined_info:
             try:
                 variable_stats = df.predetermined_info.get_column_stats(variable)
-            except KeyError:
+            except InputError:
                 continue
 
         # Compute summable statistics if they do not exist yet
@@ -428,7 +429,7 @@ def _orchestrate_local_categorical_statistics(
         if has_predetermined_info:
             try:
                 column_stats = df.predetermined_info.get_column_stats(column_name)
-            except KeyError:
+            except InputError:
                 continue
 
         # Get the value counts for the column safely
@@ -519,7 +520,7 @@ def _orchestrate_local_numerical_statistics(
         if has_predetermined_info:
             try:
                 column_stats = df.predetermined_info.get_column_stats(column_name)
-            except KeyError:
+            except InputError:
                 continue
 
         # Count the occurrences of missing values safely if it does not exist yet
