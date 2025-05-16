@@ -13,15 +13,42 @@ import json
 
 import pandas as pd
 
-from typing import Any, Callable, cast, Dict, List, Optional, Union, Tuple, TypeVar
+from typing import Any, Callable, cast, Dict, List, Optional, Union, Tuple, TypedDict, TypeVar
 
 from vantage6.algorithm.tools.exceptions import AlgorithmError, CollectOrganizationError, DataError, InputError
 from vantage6.algorithm.tools.util import info, warn, error
 from vantage6.algorithm.client import AlgorithmClient
 
 
+# Type definitions for data stratification
+class RangeDetails(TypedDict):
+    start: Optional[Union[int, float]]
+    end: Optional[Union[int, float]]
+
+
+class StratificationDetails(TypedDict):
+    variables_to_stratify: Optional[Dict[str, Union[List[str], RangeDetails]]]
+
+
+# Type definition for safe calculation
+T = TypeVar('T')
+
+
+# Type definitions for variable details (data type setting)
+class CategoricalDetails(TypedDict):
+    datatype: str
+    inliers: List[str]
+
+
+class NonCategoricalDetails(TypedDict):
+    datatype: str
+
+
+VariableDetails = Union[CategoricalDetails, NonCategoricalDetails]
+
+
 def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
-    Dict[str, Union[List[str], Dict[str, Union[int, float]]]]]) -> pd.DataFrame:
+    StratificationDetails['variables_to_stratify']]) -> pd.DataFrame:
     """
     Stratify the DataFrame based on the specified variables.
 
@@ -32,7 +59,7 @@ def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
 
     Args:
         df (pd.DataFrame): The DataFrame to be stratified.
-        variables_to_stratify (Optional[Dict[str, Union[List[str], Dict[str, Union[int, float]]]]]):
+        variables_to_stratify (StratificationDetails):
             A dictionary where keys are column names and values are lists of acceptable values or range dictionaries.
             Example:
             {
@@ -150,9 +177,6 @@ def safe_log(level: str, message: str, variables: Optional[List[str]] = None) ->
         error(message)
 
 
-T = TypeVar('T')  # Define a type variable for the return type
-
-
 def safe_calculate(calculation_func: Callable[..., T], default_value: T = None, **kwargs: Any) -> T:
     """
     Safely execute a calculation without leaking data in exceptions.
@@ -173,13 +197,13 @@ def safe_calculate(calculation_func: Callable[..., T], default_value: T = None, 
         return cast(T, default_value)
 
 
-def set_datatypes(df: pd.DataFrame, variable_details: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
+def set_datatypes(df: pd.DataFrame, variable_details: Dict[str, VariableDetails]) -> pd.DataFrame:
     """
     Set the datatypes for each variable in the DataFrame based on the provided details.
 
     Args:
         df (pd.DataFrame): The DataFrame to be modified.
-        variable_details (Dict[str, Dict[str, Any]]): A dictionary where keys are column names and
+        variable_details (Dict[str, VariableDetails]): A dictionary where keys are column names and
                                 values are dictionaries containing datatype information.
             Example:
             {
@@ -223,7 +247,8 @@ def set_datatypes(df: pd.DataFrame, variable_details: Dict[str, Dict[str, Any]])
 
 
 def sum_variables(df: pd.DataFrame, variables: List[str], new_variable_name: str,
-                  check_range: Tuple[float, float] = None, required_items: int = None, strict: bool = True) -> pd.DataFrame:
+                  check_range: Tuple[float, float] = None, required_items: int = None,
+                  strict: bool = True) -> pd.DataFrame:
     """
     Sum the specified variables in the DataFrame and create a new variable with the result.
 
@@ -238,7 +263,6 @@ def sum_variables(df: pd.DataFrame, variables: List[str], new_variable_name: str
         check_range (tuple[float, float], optional): Expected range for individual items (min, max).
         required_items (int, optional): Number of items required for valid score calculation.
         strict (bool): If True, raises errors for invalid data. If False, logs warnings (default: True).
-
 
     Returns:
         pd.DataFrame: The DataFrame with the new summed variable.
@@ -290,7 +314,7 @@ class PredeterminedInfoAccessor:
     This can, for example, be used to address issues as one-to-many relationships skewing missing data computation.
     """
 
-    def __init__(self, pandas_obj):
+    def __init__(self, pandas_obj: pd.DataFrame):
         """
         Initialise the PredeterminedInfoAccessor.
 
@@ -313,22 +337,22 @@ class PredeterminedInfoAccessor:
 
     def add_stat(self,
                  stat_name: str,
-                 calculation_func: Optional[callable] = None,
+                 calculation_func: Optional[Callable[..., Any]] = None,
                  value: Any = None,
                  per_column: bool = False,
-                 store_output_index: int = None,
-                 update_with_output_index: int = None,
-                 **kwargs) -> None:
+                 store_output_index: Optional[int] = None,
+                 update_with_output_index: Optional[int] = None,
+                 **kwargs: Any) -> None:
         """
         Add a custom statistic to the DataFrame.
 
         Args:
             stat_name (str): Name of the statistic to store
-            calculation_func (Optional[callable]): Function to calculate the statistic
+            calculation_func (Optional[Callable[..., Any]]): Function to calculate the statistic
             value (Any, optional): Direct value to store if not using calculation_func
             per_column (bool): If True, calculate/store the stat for each column separately
-            store_output_index (int, optional): If function returns tuple, index of value to store
-            update_with_output_index (int, optional): If function returns tuple, index to update DataFrame
+            store_output_index (Optional[int]): If function returns tuple, index of value to store
+            update_with_output_index (Optional[int]): If function returns tuple, index to update DataFrame
             **kwargs: Additional arguments to pass to calculation_func
 
         Raises:
@@ -342,7 +366,7 @@ class PredeterminedInfoAccessor:
                 value = {}
                 updated_columns = {}
                 for col in self._obj.columns:
-                    def calculate_for_column(**kwargs):
+                    def calculate_for_column(**kwargs: Any) -> Any:
                         result = calculation_func(self._obj[col], **kwargs)
                         if isinstance(result, tuple):
                             stat_value = result[store_output_index] if store_output_index is not None else result[0]
@@ -362,7 +386,7 @@ class PredeterminedInfoAccessor:
                         self._obj[col] = series
                     safe_log("info", f"Updated {len(updated_columns)} columns with new values")
             else:
-                def calculate_for_df(**kwargs):
+                def calculate_for_df(**kwargs: Any) -> Any:
                     result = calculation_func(self._obj, **kwargs)
                     if isinstance(result, tuple):
                         return result[store_output_index] if store_output_index is not None else result[0]
@@ -386,13 +410,13 @@ class PredeterminedInfoAccessor:
         }
         safe_log("info", f"Successfully added information on '{stat_name}'")
 
-    def get_stat(self, stat_name: str, column: str = None) -> Any:
+    def get_stat(self, stat_name: str, column: Optional[str] = None) -> Any:
         """
         Retrieve a stored statistic.
 
         Args:
             stat_name (str): Name of the statistic to retrieve
-            column (str, optional): If the stat is per-column, specify which column to get
+            column (Optional[str]): If the stat is per-column, specify which column to get
 
         Returns:
             Any: The stored statistic value
@@ -451,17 +475,17 @@ class PredeterminedInfoAccessor:
 
         return column_stats
 
-    def list_stats(self) -> Dict:
+    def list_stats(self) -> Dict[str, Any]:
         """
         List all stored statistics.
 
         Returns:
-            Dict: Dictionary of stored statistics
+            Dict[str, Any]: Dictionary of stored statistics
         """
         safe_log("info", "Listing all available predetermined information")
         return self._obj.attrs.get('stats', {})
 
-    def update_stat(self, stat_name: str, **kwargs) -> None:
+    def update_stat(self, stat_name: str, **kwargs: Any) -> None:
         """
         Update a specific statistic.
 

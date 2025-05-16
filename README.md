@@ -37,6 +37,12 @@ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.2
 For the `setup.py` file, you can add the following line to the `install_requires` list:
 
 ```python
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.2",
+```
+
+The algorithm's `setup.py`, particularly the `install_requirements`, section file should then look something like this:
+
+```python
 from os import path
 from codecs import open
 from setuptools import setup, find_packages
@@ -58,7 +64,7 @@ setup(
         'vantage6-algorithm-tools',
         'numpy',
         'pandas',
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.2",
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.2"
     # other dependencies
     ]
 )

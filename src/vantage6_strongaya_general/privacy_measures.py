@@ -29,12 +29,16 @@ from vantage6.algorithm.client import AlgorithmClient
 # Import safe logging and calculation functions from misc
 from .miscellaneous import safe_log, safe_calculate
 
-# Type definitions for improved type checking
+# Type definitions for general use
 DataFrameOrDict = Union[pd.DataFrame, Dict[str, Any]]
 Number = Union[int, float]
-PrivacyResult = Union[Dict[str, Any], pd.DataFrame]
+
+# Type definitions for differential privacy
 BinType = Union[List[pd.Timestamp], List[timedelta], List[float]]
+DifferentialPrivacyReturn = Literal["verbose", "dataframe"]
+DifferentialPrivacyOperation = Literal["mean", "sum", "count"]
 NoiseDistribution = Literal["laplace", "gaussian"]
+PrivacyResult = Union[Dict[str, Any], pd.DataFrame]
 
 
 def mask_unnecessary_variables(df: pd.DataFrame, variables_to_use: List[str]) -> pd.DataFrame:
@@ -982,9 +986,9 @@ def apply_differential_privacy(df: pd.DataFrame,
                                epsilon: float = 0.1,
                                delta: float = 1e-5,
                                distribution: NoiseDistribution = "laplace",
-                               operation: str = 'mean',
+                               operation: DifferentialPrivacyOperation = 'mean',
                                budget_manager: Optional[PrivacyBudgetManager] = None,
-                               return_type: Literal['verbose', 'dataframe'] = 'verbose',
+                               return_type: DifferentialPrivacyReturn = 'verbose',
                                randomize_order: bool = True,
                                debug_mode: bool = False,
                                **kwargs) -> PrivacyResult:
