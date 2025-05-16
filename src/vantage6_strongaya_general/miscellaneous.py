@@ -42,6 +42,7 @@ class CategoricalDetails(TypedDict):
 
 class NonCategoricalDetails(TypedDict):
     datatype: str
+    inliers: List[int | float]
 
 
 VariableDetails = Union[CategoricalDetails, NonCategoricalDetails]
