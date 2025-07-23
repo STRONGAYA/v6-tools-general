@@ -165,24 +165,27 @@ def compute_local_general_statistics(
     categorical_statistics = pd.DataFrame(columns=["variable", "value", "count"])
     numerical_statistics = pd.DataFrame(columns=["variable", "statistic", "value"])
 
-    for variable in df.columns:
-        # Check the datatype of the variable
-        if isinstance(df[variable].dtype, pd.CategoricalDtype):
-            categorical_statistics = safe_calculate(
-                _orchestrate_local_categorical_statistics,
-                pd.DataFrame(columns=["variable", "value", "count"]),
-                df=df,
-                variable_details=variable_details
-            )
-        elif pd.api.types.is_numeric_dtype(df[variable]):
-            numerical_statistics = safe_calculate(
-                _orchestrate_local_numerical_statistics,
-                pd.DataFrame(columns=["variable", "statistic", "value"]),
-                df=df,
-                variable_details=variable_details
-            )
-        else:
-            continue
+    # Separate categorical and numerical columns
+    categorical_columns = [col for col in df.columns if isinstance(df[col].dtype, pd.CategoricalDtype)]
+    numerical_columns = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
+
+    # Process categorical variables if any exist
+    if categorical_columns:
+        categorical_statistics = safe_calculate(
+            _orchestrate_local_categorical_statistics,
+            pd.DataFrame(columns=["variable", "value", "count"]),
+            df=df[categorical_columns],
+            variable_details=variable_details
+        )
+
+    # Process numerical variables if any exist
+    if numerical_columns:
+        numerical_statistics = safe_calculate(
+            _orchestrate_local_numerical_statistics,
+            pd.DataFrame(columns=["variable", "statistic", "value"]),
+            df=df[numerical_columns],
+            variable_details=variable_details
+        )
 
     return {"categorical": categorical_statistics.to_json(), "numerical": numerical_statistics.to_json()}
 
