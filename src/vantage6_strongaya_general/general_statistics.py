@@ -268,7 +268,7 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
             try:
                 variable_stats = df.predetermined_info.get_column_stats(variable)
             except InputError:
-                continue
+                pass
 
         # Compute summable statistics if they do not exist yet
         if 'summable_statistics' in variable_stats:
@@ -433,7 +433,7 @@ def _orchestrate_local_categorical_statistics(
             try:
                 column_stats = df.predetermined_info.get_column_stats(column_name)
             except InputError:
-                continue
+                pass
 
         # Get the value counts for the column safely
         if 'value_counts' in column_stats:
@@ -524,7 +524,7 @@ def _orchestrate_local_numerical_statistics(
             try:
                 column_stats = df.predetermined_info.get_column_stats(column_name)
             except InputError:
-                continue
+                pass
 
         # Count the occurrences of missing values safely if it does not exist yet
         if 'na' in column_stats:
