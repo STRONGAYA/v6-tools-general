@@ -444,9 +444,9 @@ def _orchestrate_local_categorical_statistics(
 
         # Get the inliers for the column from the provided dictionary
         if variable_details is not None and column_name in variable_details:
-            inliers = variable_details[column_name].get("inliers", [])
+            inliers = variable_details[column_name].get("inliers", None)
         else:
-            inliers = []
+            inliers = None
 
         # Get the inliers and outliers safely
         if 'inliers_series' in column_stats and 'outliers_series' in column_stats:
@@ -720,7 +720,10 @@ def _compute_local_inliers_and_outliers(
     Returns:
         Tuple[pd.Series, pd.Series]: A tuple containing two Series, one for inliers and one for outliers.
     """
-    if isinstance(inliers, list) and isinstance(column_values.dtype, pd.CategoricalDtype):
+    if inliers is None:
+        safe_log("warn", "No inliers provided, returning all values as inliers and no outliers")
+        return column_values, pd.Series(dtype='Float64')
+    elif isinstance(inliers, list) and isinstance(column_values.dtype, pd.CategoricalDtype):
         # Categorical variable
         inliers_series = column_values[column_values.isin(inliers)]
         outliers_series = column_values[~column_values.isin(inliers)]
