@@ -458,7 +458,7 @@ class PredeterminedInfoAccessor:
             safe_log("error", f"Column '{column}' not found in DataFrame")
             raise InputError(f"Column '{column}' not found in DataFrame")
 
-        safe_log("info", f"Retrieving all statistics for column '{column}'")
+        safe_log("info", f"Retrieving all predetermined statistics for column '{column}'")
 
         column_stats = {}
         for stat_name, stat_info in self._obj.attrs.get('stats', {}).items():
@@ -468,7 +468,7 @@ class PredeterminedInfoAccessor:
 
         stats_count = len(column_stats)
         if stats_count == 0:
-            safe_log("info", f"No statistics found for column '{column}'")
+            safe_log("info", f"No predetermined statistics found for column '{column}'")
         elif stats_count <= 2:
             safe_log("warn", "For only 1-2 statistics, consider using get_stat() directly")
         else:
