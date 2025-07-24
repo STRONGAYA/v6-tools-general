@@ -27,6 +27,25 @@ dependencies = [
     "vantage6-algorithm-tools>=3.6.0",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "hypothesis>=6.75.0",
+    "faker>=18.0.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "hypothesis>=6.75.0",
+    "faker>=18.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/STRONGAYA/v6-tools-general"
 "Bug Tracker" = "https://github.com/STRONGAYA/v6-tools-general/issues"
