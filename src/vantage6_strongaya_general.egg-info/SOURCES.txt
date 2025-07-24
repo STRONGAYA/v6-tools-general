@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+src/vantage6_strongaya_general/__init__.py
+src/vantage6_strongaya_general/general_statistics.py
+src/vantage6_strongaya_general/miscellaneous.py
+src/vantage6_strongaya_general/privacy_measures.py
+src/vantage6_strongaya_general.egg-info/PKG-INFO
+src/vantage6_strongaya_general.egg-info/SOURCES.txt
+src/vantage6_strongaya_general.egg-info/dependency_links.txt
+src/vantage6_strongaya_general.egg-info/requires.txt
+src/vantage6_strongaya_general.egg-info/top_level.txt
