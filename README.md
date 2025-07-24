@@ -1,5 +1,11 @@
 # STRONG AYA's General Vantage6 tools
 
+## Testing Status
+![Tests](https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg)
+[![codecov](https://codecov.io/gh/STRONGAYA/v6-tools-general/branch/main/graph/badge.svg)](https://codecov.io/gh/STRONGAYA/v6-tools-general)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 # Purpose of this repository
 
 This repository contains general functionalities and tools for the STRONG AYA project.
@@ -189,6 +195,125 @@ The library can be installed as follows:
 
 ```bash
 pip install git+https://github.com/STRONGAYA/v6-tools-general.git
+```
+
+# Testing
+
+This repository includes a comprehensive testing framework to ensure the reliability and correctness of all functions, especially in federated scenarios.
+
+## Test Structure
+
+```
+tests/
+├── conftest.py                      # Common fixtures and test utilities
+├── test_data/                       # Synthetic test data
+│   ├── synthetic_data_generator.py  # Data generation utilities
+│   └── *.csv                        # Generated test datasets
+├── unit/                            # Unit tests for individual functions
+│   ├── test_general_statistics.py   # Tests for statistical functions
+│   ├── test_miscellaneous.py        # Tests for utility functions
+│   └── test_privacy_measures.py     # Tests for privacy functions
+├── integration/                     # Integration tests
+│   ├── test_federated_vs_central.py # Federated vs centralized comparisons
+│   └── test_stratification.py       # Data stratification workflows
+└── utils/                           # Test helper utilities
+    └── test_helpers.py              # Validation and comparison tools
+```
+
+## Running Tests
+
+### Prerequisites
+
+Install test dependencies:
+
+```bash
+pip install pytest pytest-cov pytest-mock hypothesis faker
+```
+
+### Basic Test Execution
+
+```bash
+# Run all tests
+pytest
+
+# Run unit tests only
+pytest tests/unit/
+
+# Run integration tests only
+pytest tests/integration/
+
+# Run with coverage report
+pytest --cov=vantage6_strongaya_general --cov-report=html
+
+# Run specific test module
+pytest tests/unit/test_general_statistics.py
+
+# Run with verbose output
+pytest -v
+```
+
+### Test Categories
+
+- **Unit Tests**: Test individual functions in isolation
+- **Integration Tests**: Test federated vs centralized implementations
+- **Performance Tests**: Benchmark function performance with large datasets
+- **Edge Case Tests**: Test behavior with unusual data distributions
+
+### Federated vs Centralized Validation
+
+The test suite includes comprehensive validation that federated statistical computations produce equivalent results to their centralized counterparts:
+
+```python
+# Example: Testing federated statistics match centralized
+def test_federated_equals_centralized():
+    # Split data across organizations
+    federated_data = split_by_organization(test_data)
+    
+    # Compute federated results
+    local_results = [compute_local_stats(org_data) for org_data in federated_data]
+    federated_result = aggregate_results(local_results)
+    
+    # Compute centralized result
+    centralized_result = compute_centralized_stats(combined_data)
+    
+    # Validate equivalence
+    assert_federated_equals_centralized(federated_result, centralized_result)
+```
+
+### Test Data
+
+The test suite uses synthetic datasets that:
+- Cover various statistical distributions (normal, skewed, uniform)
+- Include edge cases (small samples, missing data, outliers)
+- Simulate realistic medical research scenarios
+- Test privacy-preserving mechanisms
+
+### Continuous Integration
+
+Tests run automatically on every push and pull request via GitHub Actions:
+- Multiple Python versions (starting with 3.10)
+- Code coverage reporting (target >90%)
+- Performance benchmarking
+- Security scanning
+
+## Contributing to Tests
+
+When contributing new functionality:
+
+1. **Add unit tests** for all new functions
+2. **Add integration tests** for federated scenarios
+3. **Include edge case testing** for robustness
+4. **Update test data** if needed for new scenarios
+5. **Maintain >90% code coverage**
+
+### Test Guidelines
+
+- Use descriptive test names that explain what is being tested
+- Include both positive and negative test cases
+- Test edge cases and error conditions
+- Use realistic synthetic data
+- Mock external dependencies (AlgorithmClient, environment variables)
+- Validate both structure and values of results
 ```
 
 # Contributers
