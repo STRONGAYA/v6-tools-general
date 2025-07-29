@@ -3,7 +3,6 @@ Unit tests for general_statistics module.
 
 This module contains comprehensive unit tests for all functions in the
 general_statistics module, including local and aggregate statistical computations.
-Uses British English for consistency.
 """
 
 import pytest
@@ -316,10 +315,10 @@ class TestComputeLocalAdjustedDeviation:
         test_data = sample_numerical_data[['age', 'height']].dropna()
 
         # Mock global statistics
-        global_stats = {
+        global_stats = """{
             'age': {'mean': 45.0, 'std': 15.0},
             'height': {'mean': 170.0, 'std': 10.0}
-        }
+        }"""
 
         result = compute_local_adjusted_deviation(test_data, global_stats)
 

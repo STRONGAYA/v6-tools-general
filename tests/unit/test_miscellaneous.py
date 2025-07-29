@@ -3,14 +3,11 @@ Unit tests for miscellaneous module.
 
 This module contains comprehensive unit tests for utility functions in the
 miscellaneous module, including logging, data handling, and transformation functions.
-Uses British English for consistency.
 """
 
 import pytest
 import pandas as pd
-import numpy as np
-from unittest.mock import patch, MagicMock
-import warnings
+from unittest.mock import patch
 
 from vantage6_strongaya_general.miscellaneous import (
     safe_log,
