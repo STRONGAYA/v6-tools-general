@@ -2,7 +2,7 @@
 Integration tests for data stratification functionality.
 
 This module tests the complete data stratification workflow
-from configuration to statistical computation.
+from configuration to statistical computation using British English.
 """
 
 import pytest
@@ -38,7 +38,7 @@ class TestDataStratificationWorkflow:
         # Compute statistics on stratified data
         if len(stratified_data) > 0:
             try:
-                stats_result = compute_local_general_statistics(stratified_data, stratification_config)
+                stats_result = compute_local_general_statistics(stratified_data)
                 assert isinstance(stats_result, dict)
             except Exception as e:
                 # Stratified statistics might fail with small samples

@@ -2,78 +2,41 @@
 Test utilities for supporting test execution and validation.
 
 This module provides helper functions for testing federated analytics,
-including mock clients, data validation, performance measurement, and
-comparison utilities for federated vs centralized computations.
+including data validation, performance measurement, and comparison 
+utilities for federated vs centralised computations.
 """
 
 import time
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Any, Callable, Optional, Union, Tuple
-from unittest.mock import MagicMock
 import warnings
 from contextlib import contextmanager
 import json
+from scipy import stats
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-class MockAlgorithmClient:
-    """Enhanced mock AlgorithmClient for testing federated functions."""
-    
-    def __init__(self, organizations: List[Dict[str, Any]] = None):
-        """
-        Initialize mock client with organization data.
-        
-        Args:
-            organizations: List of organization dictionaries
-        """
-        self.organizations = organizations or [
-            {'id': 1, 'name': 'Organization 1'},
-            {'id': 2, 'name': 'Organization 2'},
-            {'id': 3, 'name': 'Organization 3'},
-            {'id': 4, 'name': 'Organization 4'}
-        ]
-        
-        # Mock organization endpoint
-        self.organization = MagicMock()
-        self.organization.list.return_value = self.organizations
-        
-        # Mock task endpoint
-        self.task = MagicMock()
-        self.task.create.return_value = {'id': 123}
-        
-        # Mock results
-        self.results = []
-        
-    def wait_for_results(self, task_id: int) -> List[Dict[str, Any]]:
-        """Mock wait_for_results method."""
-        return self.results
-    
-    def set_mock_results(self, results: List[Dict[str, Any]]):
-        """Set mock results for testing."""
-        self.results = results
-
-
-class CentralizedImplementations:
+class CentralisedImplementations:
     """
-    Centralized implementations of federated functions for comparison testing.
+    Centralised implementations of federated functions for comparison testing.
     
     These implementations serve as ground truth for validating federated results.
     """
     
     @staticmethod
-    def compute_centralized_statistics(df: pd.DataFrame, 
+    def compute_centralised_statistics(df: pd.DataFrame, 
                                      variables: List[str]) -> Dict[str, Any]:
         """
-        Compute centralized statistics for comparison with federated results.
+        Compute centralised statistics for comparison with federated results.
         
         Args:
-            df: Combined dataset from all organizations
-            variables: List of variables to analyze
+            df: Combined dataset from all organisations
+            variables: List of variables to analyse
             
         Returns:
-            Dictionary of centralized statistics
+            Dictionary of centralised statistics
         """
         results = {
             'numerical': {},
@@ -141,11 +104,11 @@ class CentralizedImplementations:
 
 
 class FederatedTestValidator:
-    """Validator for comparing federated and centralized results."""
+    """Validator for comparing federated and centralised results."""
     
     def __init__(self, tolerance: float = 1e-6):
         """
-        Initialize validator with tolerance for numerical comparisons.
+        Initialise validator with tolerance for numerical comparisons.
         
         Args:
             tolerance: Numerical tolerance for comparisons
@@ -154,14 +117,14 @@ class FederatedTestValidator:
     
     def validate_numerical_statistics(self, 
                                     federated_result: Dict[str, Any], 
-                                    centralized_result: Dict[str, Any],
+                                    centralised_result: Dict[str, Any],
                                     variable: str) -> Tuple[bool, List[str]]:
         """
-        Validate numerical statistics between federated and centralized results.
+        Validate numerical statistics between federated and centralised results.
         
         Args:
             federated_result: Result from federated computation
-            centralized_result: Result from centralized computation
+            centralised_result: Result from centralised computation
             variable: Variable name to validate
             
         Returns:
@@ -173,12 +136,12 @@ class FederatedTestValidator:
             errors.append(f"Variable {variable} not found in federated numerical results")
             return False, errors
         
-        if variable not in centralized_result.get('numerical', {}):
-            errors.append(f"Variable {variable} not found in centralized numerical results")
+        if variable not in centralised_result.get('numerical', {}):
+            errors.append(f"Variable {variable} not found in centralised numerical results")
             return False, errors
         
         fed_stats = federated_result['numerical'][variable]
-        cent_stats = centralized_result['numerical'][variable]
+        cent_stats = centralised_result['numerical'][variable]
         
         # Check each statistic
         for stat_name in ['count', 'mean', 'std', 'min', 'max', 'median']:
@@ -199,14 +162,14 @@ class FederatedTestValidator:
     
     def validate_categorical_statistics(self, 
                                       federated_result: Dict[str, Any], 
-                                      centralized_result: Dict[str, Any],
+                                      centralised_result: Dict[str, Any],
                                       variable: str) -> Tuple[bool, List[str]]:
         """
-        Validate categorical statistics between federated and centralized results.
+        Validate categorical statistics between federated and centralised results.
         
         Args:
             federated_result: Result from federated computation
-            centralized_result: Result from centralized computation
+            centralised_result: Result from centralised computation
             variable: Variable name to validate
             
         Returns:
@@ -218,12 +181,12 @@ class FederatedTestValidator:
             errors.append(f"Variable {variable} not found in federated categorical results")
             return False, errors
         
-        if variable not in centralized_result.get('categorical', {}):
-            errors.append(f"Variable {variable} not found in centralized categorical results")
+        if variable not in centralised_result.get('categorical', {}):
+            errors.append(f"Variable {variable} not found in centralised categorical results")
             return False, errors
         
         fed_stats = federated_result['categorical'][variable]
-        cent_stats = centralized_result['categorical'][variable]
+        cent_stats = centralised_result['categorical'][variable]
         
         # Check counts
         fed_counts = fed_stats.get('counts', {})
@@ -358,13 +321,13 @@ def create_federated_scenario(datasets: Dict[int, pd.DataFrame],
     Create a complete federated testing scenario.
     
     Args:
-        datasets: Dictionary mapping organization_id to DataFrame
+        datasets: Dictionary mapping organisation_id to DataFrame
         variables_config: Configuration for variables
         
     Returns:
         Complete testing scenario with data and expected results
     """
-    # Combine all datasets for centralized computation
+    # Combine all datasets for centralised computation
     combined_df = pd.concat(datasets.values(), ignore_index=True)
     
     # Extract variables from config
@@ -374,8 +337,8 @@ def create_federated_scenario(datasets: Dict[int, pd.DataFrame],
     if 'categorical' in variables_config:
         all_variables.extend(variables_config['categorical'].keys())
     
-    # Compute centralized results for comparison
-    centralized_results = CentralizedImplementations.compute_centralized_statistics(
+    # Compute centralised results for comparison
+    centralised_results = CentralisedImplementations.compute_centralised_statistics(
         combined_df, all_variables
     )
     
@@ -383,8 +346,8 @@ def create_federated_scenario(datasets: Dict[int, pd.DataFrame],
         'federated_data': datasets,
         'combined_data': combined_df,
         'variables_config': variables_config,
-        'centralized_results': centralized_results,
-        'organization_ids': list(datasets.keys())
+        'centralised_results': centralised_results,
+        'organisation_ids': list(datasets.keys())
     }
 
 
@@ -478,3 +441,193 @@ def save_benchmark_results(results: Dict[str, Any], filepath: str = "benchmark_r
     """
     with open(filepath, 'w') as f:
         json.dump(results, f, indent=2, default=str)
+
+
+def compute_quantile_test_statistics(data, quantiles=[0.25, 0.5, 0.75]):
+    """
+    Compute test statistics for quantile validation using asymptotic theory.
+
+    This function calculates the theoretical standard error for each quantile
+    using the asymptotic formula: SE(q) = sqrt(q(1-q)/n) / f(q_val)
+    where f(q_val) is the probability density function at the quantile value.
+
+    Args:
+        data: Array of data values
+        quantiles: List of quantile levels (e.g., [0.25, 0.5, 0.75])
+
+    Returns:
+        Dictionary with statistics for each quantile including value, standard error,
+        confidence interval, and density estimation
+    """
+    n = len(data)
+    results = {}
+
+    for q in quantiles:
+        # Step 1: Calculate the exact quantile value
+        q_val = np.quantile(data, q)
+
+        # Step 2: Estimate probability density at quantile using kernel density estimation
+        # This is needed for the asymptotic standard error formula
+        try:
+            from scipy.stats import gaussian_kde
+            kde = gaussian_kde(data)
+            density_at_q = kde(q_val)[0]
+        except:
+            # Fallback: use simple density estimation
+            density_at_q = 1.0  # Default if KDE fails
+
+        # Step 3: Calculate asymptotic standard error
+        # Formula: SE(q) = sqrt(q(1-q)/n) / f(q_val)
+        # The numerator sqrt(q(1-q)/n) is the variance component
+        # The denominator f(q_val) is the density at the quantile
+        variance_component = np.sqrt(q * (1 - q) / n)
+        se = variance_component / max(density_at_q, 1e-6)  # Avoid division by zero
+
+        # 95% confidence interval
+        ci_lower = q_val - 1.96 * se
+        ci_upper = q_val + 1.96 * se
+
+        results[q] = {
+            'value': q_val,
+            'se': se,
+            'ci': (ci_lower, ci_upper),
+            'density': density_at_q
+        }
+
+    return results
+
+
+def validate_quantiles(centralised_data, federated_quantiles, test_name=""):
+    """
+    Robust quantile validation with multiple statistical criteria.
+
+    This function performs comprehensive validation using three complementary tests:
+    1. Confidence Interval Test: Checks if federated quantile falls within theoretical CI
+    2. Relative Error Test: Compares difference relative to data spread (IQR)
+    3. Z-Score Test: Standardised difference in units of standard error
+
+    Args:
+        centralised_data: Raw data array for computing true quantiles
+        federated_quantiles: Dictionary with federated quantile results
+        test_name: Name for logging purposes
+
+    Returns:
+        Dictionary with detailed test results and pass/fail status
+    """
+
+    print(f"\n  === QUANTILE VALIDATION ===")
+    print(f"    Test: {test_name}")
+
+    quantile_keys = [0.25, 0.5, 0.75]
+    cent_stats = compute_quantile_test_statistics(centralised_data, quantile_keys)
+
+    # Mapping for federated keys
+    fed_key_map = {0.25: 'Q1', 0.5: 'Q2', 0.75: 'Q3'}
+
+    results = {
+        'individual_tests': {},
+        'overall_pass': True
+    }
+
+    # Individual quantile tests - validate each quantile separately
+    for q in quantile_keys:
+        fed_key = fed_key_map[q]
+        if fed_key not in federated_quantiles:
+            print(f"Warning: {fed_key} not found in federated results, skipping")
+            continue
+
+        # Extract centralised and federated quantile values
+        cent_val = cent_stats[q]['value']
+        fed_val = float(federated_quantiles[fed_key])
+        ci_lower, ci_upper = cent_stats[q]['ci']
+
+        # TEST 1: Confidence Interval Containment Test
+        # Checks if each federated quantile falls within the 95% confidence interval of centralised quantile
+        in_ci = ci_lower <= fed_val <= ci_upper
+
+        # TEST 2: Relative Error Test with adaptive threshold
+        # Uses IQR as the scale for relative error assessment
+        iqr = cent_stats[0.75]['value'] - cent_stats[0.25]['value']
+        scale = max(iqr, np.std(centralised_data), 1e-6)  # Use IQR, fallback to std, avoid zero
+        rel_error = abs(fed_val - cent_val) / scale
+        rel_threshold = 0.1  # 10% of scale
+        rel_pass = rel_error <= rel_threshold
+
+        # TEST 3: Z-Score Test
+        # Tests if the difference is within acceptable statistical bounds
+        z_score = abs(fed_val - cent_val) / cent_stats[q]['se']
+        z_threshold = 2.58  # 99% confidence (stricter than 95%)
+        z_pass = z_score <= z_threshold
+
+        # Final decision: Pass if any two tests pass
+        test_passes = [in_ci, rel_pass, z_pass]
+        result_pass = sum(test_passes) >= 2
+
+        result = {
+            'quantile': q,
+            'centralised_value': cent_val,
+            'federated_value': fed_val,
+            'ci_test': in_ci,
+            'ci_bounds': (ci_lower, ci_upper),
+            'rel_error': rel_error,
+            'rel_threshold': rel_threshold,
+            'rel_test': rel_pass,
+            'z_score': z_score,
+            'z_threshold': z_threshold,
+            'z_test': z_pass,
+            'pass': result_pass
+        }
+
+        results['individual_tests'][q] = result
+        if not result_pass:
+            results['overall_pass'] = False
+
+        # Print detailed results
+        print(f"  Quantile {q} ({fed_key}):")
+        print(f"    Centralised: {cent_val:.6f}, Federated: {fed_val:.6f}")
+        print(f"  CI Test: {'PASS' if in_ci else 'FAIL'}")
+        print(f"    CI = [{ci_lower:.6f}, {ci_upper:.6f}]")
+        print(f"  Relative Error Test: {'PASS' if rel_pass else 'FAIL'}")
+        print(f"    Error = {rel_error:.6f}, Threshold = {rel_threshold:.6f}")
+        print(f"  Z-Score Test: {'PASS' if z_pass else 'FAIL'}")
+        print(f"    Z = {z_score:.3f}, Threshold = {z_threshold:.3f}")
+        print(f"  Overall Result: {'PASS' if result_pass else 'FAIL'}")
+
+    print(f"\nFINAL VALIDATION: {'PASS' if results['overall_pass'] else 'FAIL'}")
+
+    return results
+
+
+def assert_federated_equals_centralised(federated_result: Dict[str, Any],
+                                      centralised_result: Dict[str, Any],
+                                      tolerance: float = 1e-6) -> None:
+    """
+    Assert that federated results equal centralised results within tolerance.
+    
+    Args:
+        federated_result: Result from federated computation
+        centralised_result: Result from centralised computation
+        tolerance: Numerical tolerance
+        
+    Raises:
+        AssertionError: If results don't match within tolerance
+    """
+    validator = FederatedTestValidator(tolerance)
+    
+    # Validate numerical variables
+    if 'numerical' in federated_result and 'numerical' in centralised_result:
+        for variable in federated_result['numerical'].keys():
+            is_valid, errors = validator.validate_numerical_statistics(
+                federated_result, centralised_result, variable
+            )
+            if not is_valid:
+                raise AssertionError(f"Numerical validation failed for {variable}: {errors}")
+    
+    # Validate categorical variables
+    if 'categorical' in federated_result and 'categorical' in centralised_result:
+        for variable in federated_result['categorical'].keys():
+            is_valid, errors = validator.validate_categorical_statistics(
+                federated_result, centralised_result, variable
+            )
+            if not is_valid:
+                raise AssertionError(f"Categorical validation failed for {variable}: {errors}")

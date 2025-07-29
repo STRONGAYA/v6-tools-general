@@ -2,14 +2,13 @@
 Test configuration and fixtures for vantage6-strongaya-general testing suite.
 
 This module provides common fixtures and utilities used across all test modules.
-It includes synthetic data generation, mock clients, and shared test utilities.
+It includes synthetic data generation and shared test utilities.
 """
 
 import pytest
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional, Union
-from unittest.mock import MagicMock
 import warnings
 
 # Suppress warnings during testing
@@ -240,7 +239,7 @@ def stratification_config():
 @pytest.fixture
 def quantile_test_data():
     """
-    Generate specific test data for quantile computations.
+    Generate specific test data for quantile computations with organisation splits.
     
     Returns:
         Dict[str, pd.DataFrame]: Various datasets for testing quantile functions.
@@ -252,25 +251,25 @@ def quantile_test_data():
     # Normal distribution
     datasets['normal'] = pd.DataFrame({
         'value': np.random.normal(50, 10, 1000),
-        'organization_id': np.random.choice([1, 2, 3], 1000)
+        'organisation_id': np.random.choice([1, 2, 3], 1000)
     })
 
     # Skewed distribution
     datasets['skewed'] = pd.DataFrame({
         'value': np.random.exponential(2, 1000),
-        'organization_id': np.random.choice([1, 2, 3], 1000)
+        'organisation_id': np.random.choice([1, 2, 3], 1000)
     })
 
     # Uniform distribution
     datasets['uniform'] = pd.DataFrame({
         'value': np.random.uniform(0, 100, 1000),
-        'organization_id': np.random.choice([1, 2, 3], 1000)
+        'organisation_id': np.random.choice([1, 2, 3], 1000)
     })
 
     # Known quantiles (for exact testing)
     datasets['known_quantiles'] = pd.DataFrame({
         'value': list(range(1, 101)),  # 1 to 100
-        'organization_id': [1] * 100
+        'organisation_id': [1] * 100
     })
 
     return datasets
@@ -295,7 +294,7 @@ def test_performance_data():
             'numerical_2': np.random.exponential(2, n_samples),
             'categorical_1': np.random.choice(['A', 'B', 'C'], n_samples),
             'categorical_2': np.random.choice(['X', 'Y'], n_samples),
-            'organization_id': np.random.choice([1, 2, 3, 4, 5], n_samples)
+            'organisation_id': np.random.choice([1, 2, 3, 4, 5], n_samples)
         })
 
     return datasets
