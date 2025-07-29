@@ -3,6 +3,7 @@ Unit tests for miscellaneous module.
 
 This module contains comprehensive unit tests for utility functions in the
 miscellaneous module, including logging, data handling, and transformation functions.
+Uses British English for consistency.
 """
 
 import pytest

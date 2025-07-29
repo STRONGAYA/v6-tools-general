@@ -3,12 +3,13 @@ Unit tests for privacy_measures module.
 
 This module contains comprehensive unit tests for privacy protection utilities,
 including differential privacy, sample size thresholding, and variable masking.
+Uses British English for consistency.
 """
 
 import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 import warnings
 
 from vantage6_strongaya_general.privacy_measures import (

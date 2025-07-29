@@ -9,6 +9,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional, Union
+from unittest.mock import MagicMock
 import warnings
 
 # Suppress warnings during testing
