@@ -186,37 +186,37 @@ class TestComputeAggregateGeneralStatistics:
         """Test basic aggregation following proper local->aggregate pattern."""
         # Create organisation datasets
         np.random.seed(42)
-        
+
         org1_data = pd.DataFrame({
             'age': np.random.normal(45, 10, 100),
             'gender': np.random.choice(['Male', 'Female'], 100)
         })
         # Make gender explicitly categorical
         org1_data['gender'] = org1_data['gender'].astype('category')
-        
+
         org2_data = pd.DataFrame({
             'age': np.random.normal(47, 12, 150),
             'gender': np.random.choice(['Male', 'Female'], 150)
         })
         # Make gender explicitly categorical
         org2_data['gender'] = org2_data['gender'].astype('category')
-        
+
         # Compute local results first (proper pattern)
         local_result1 = compute_local_general_statistics(org1_data)
         local_result2 = compute_local_general_statistics(org2_data)
-        
+
         # Now aggregate them
         aggregated_result = compute_aggregate_general_statistics([local_result1, local_result2])
-        
+
         # Test structure
         assert isinstance(aggregated_result, dict)
         assert 'numerical_general_statistics' in aggregated_result
         assert 'categorical_general_statistics' in aggregated_result
-        
+
         # Parse numerical results
         numerical_df = pd.read_json(StringIO(aggregated_result['numerical_general_statistics']))
         assert len(numerical_df) > 0
-        
+
         # Parse categorical results should work now
         categorical_df = pd.read_json(StringIO(aggregated_result['categorical_general_statistics']))
         # Don't assert categorical data presence as it might be processed differently
@@ -233,15 +233,15 @@ class TestComputeAggregateGeneralStatistics:
     def test_single_organisation_result(self):
         """Test aggregation with results from single organisation."""
         np.random.seed(42)
-        
+
         org_data = pd.DataFrame({
             'age': np.random.normal(45, 10, 100),
             'gender': np.random.choice(['Male', 'Female'], 100)
         })
-        
+
         # Compute local result
         local_result = compute_local_general_statistics(org_data)
-        
+
         # Aggregate single result
         aggregate_result = compute_aggregate_general_statistics([local_result])
 
@@ -253,55 +253,55 @@ class TestComputeAggregateGeneralStatistics:
     def test_multiple_organisations_aggregation(self):
         """Test aggregation across multiple organisations with different variables."""
         np.random.seed(42)
-        
+
         # Organisation 1 with age and gender
         org1_data = pd.DataFrame({
             'age': np.random.normal(45, 10, 100),
             'gender': np.random.choice(['Male', 'Female'], 100)
         })
-        
+
         # Organisation 2 with age, height and gender  
         org2_data = pd.DataFrame({
             'age': np.random.normal(47, 12, 150),
             'height': np.random.normal(170, 8, 150),
             'gender': np.random.choice(['Male', 'Female', 'Other'], 150)
         })
-        
+
         # Organisation 3 with only height
         org3_data = pd.DataFrame({
             'height': np.random.normal(165, 10, 80)
         })
-        
+
         # Compute local results
         local_results = [
             compute_local_general_statistics(org1_data),
             compute_local_general_statistics(org2_data),
             compute_local_general_statistics(org3_data)
         ]
-        
+
         # Aggregate results
         aggregate_result = compute_aggregate_general_statistics(local_results)
-        
+
         # Test structure
         assert isinstance(aggregate_result, dict)
         assert 'numerical_general_statistics' in aggregate_result
         assert 'categorical_general_statistics' in aggregate_result
-        
+
         # Parse and validate aggregated results
         numerical_df = pd.read_json(StringIO(aggregate_result['numerical_general_statistics']))
         categorical_df = pd.read_json(StringIO(aggregate_result['categorical_general_statistics']))
-        
+
         # Should have age from org1+org2 and height from org2+org3
         age_stats = numerical_df[numerical_df['variable'] == 'age']
         height_stats = numerical_df[numerical_df['variable'] == 'height']
-        
+
         assert len(age_stats) > 0  # Age should be present
         assert len(height_stats) > 0  # Height should be present
-        
+
         # Check counts are correctly aggregated
         age_count = age_stats[age_stats['statistic'] == 'count']['value'].iloc[0]
         height_count = height_stats[height_stats['statistic'] == 'count']['value'].iloc[0]
-        
+
         assert age_count == 250  # org1: 100 + org2: 150
         assert height_count == 230  # org2: 150 + org3: 80
 
@@ -349,18 +349,18 @@ class TestComputeAggregateAdjustedDeviation:
     def test_basic_aggregate_deviation(self):
         """Test aggregation of adjusted deviations following proper local->aggregate pattern."""
         np.random.seed(42)
-        
+
         # Create organisation data first
         org1_data = pd.DataFrame({'age': np.random.normal(45, 10, 100)})
         org2_data = pd.DataFrame({'age': np.random.normal(47, 12, 150)})
-        
+
         # Mock global statistics
         global_stats = {'age': {'mean': 46.0, 'std': 11.0}}
-        
+
         # Compute local adjusted deviations
         local_result1 = compute_local_adjusted_deviation(org1_data, global_stats)
         local_result2 = compute_local_adjusted_deviation(org2_data, global_stats)
-        
+
         # Aggregate the local results
         aggregate_result = compute_aggregate_adjusted_deviation([local_result1, local_result2])
 
@@ -377,10 +377,10 @@ class TestComputeAggregateAdjustedDeviation:
     def test_single_organisation_deviation(self):
         """Test aggregation with single organisation."""
         np.random.seed(42)
-        
+
         org_data = pd.DataFrame({'test_var': np.random.normal(25, 5, 100)})
         global_stats = {'test_var': {'mean': 25.0, 'std': 5.0}}
-        
+
         local_result = compute_local_adjusted_deviation(org_data, global_stats)
         aggregate_result = compute_aggregate_adjusted_deviation([local_result])
 
@@ -394,15 +394,15 @@ class TestStatisticsIntegration:
         """Test complete pipeline from local computation to aggregation."""
         # Remove organization_id column since it doesn't exist in our fixture
         test_data = mixed_data_sample.copy()
-        
+
         # Split data into multiple organisations manually  
         n_total = len(test_data)
         n_per_org = n_total // 3
-        
+
         org_data = {
             1: test_data.iloc[:n_per_org].copy(),
-            2: test_data.iloc[n_per_org:2*n_per_org].copy(),
-            3: test_data.iloc[2*n_per_org:].copy()
+            2: test_data.iloc[n_per_org:2 * n_per_org].copy(),
+            3: test_data.iloc[2 * n_per_org:].copy()
         }
 
         # Compute local statistics for each organisation
