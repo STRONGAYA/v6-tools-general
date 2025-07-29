@@ -73,7 +73,7 @@ def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
     Returns:
         pd.DataFrame: The stratified DataFrame.
     """
-    if variables_to_stratify is None:
+    if variables_to_stratify is None or not isinstance(variables_to_stratify, dict) or len(variables_to_stratify) == 0:
         return df
 
     safe_log("info", "Stratifying data based on specified variables")
