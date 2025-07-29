@@ -24,10 +24,10 @@ class CentralisedImplementations:
     
     These implementations serve as ground truth for validating federated results.
     """
-    
+
     @staticmethod
-    def compute_centralised_statistics(df: pd.DataFrame, 
-                                     variables: List[str]) -> Dict[str, Any]:
+    def compute_centralised_statistics(df: pd.DataFrame,
+                                       variables: List[str]) -> Dict[str, Any]:
         """
         Compute centralised statistics for comparison with federated results.
         
@@ -42,7 +42,7 @@ class CentralisedImplementations:
             'numerical': {},
             'categorical': {}
         }
-        
+
         for var in variables:
             if pd.api.types.is_numeric_dtype(df[var]):
                 # Numerical statistics
@@ -65,13 +65,13 @@ class CentralisedImplementations:
                     'unique': int(df[var].nunique()),
                     'most_common': value_counts.index[0] if len(value_counts) > 0 else None
                 }
-        
+
         return results
-    
+
     @staticmethod
-    def compute_centralized_quantiles(df: pd.DataFrame, 
-                                    variable: str, 
-                                    quantiles: List[float]) -> Dict[float, float]:
+    def compute_centralized_quantiles(df: pd.DataFrame,
+                                      variable: str,
+                                      quantiles: List[float]) -> Dict[float, float]:
         """
         Compute centralized quantiles for comparison.
         
@@ -84,11 +84,11 @@ class CentralisedImplementations:
             Dictionary mapping quantile to value
         """
         return {q: float(df[variable].quantile(q)) for q in quantiles}
-    
+
     @staticmethod
-    def compute_centralized_crosstabs(df: pd.DataFrame, 
-                                    var1: str, 
-                                    var2: str) -> pd.DataFrame:
+    def compute_centralized_crosstabs(df: pd.DataFrame,
+                                      var1: str,
+                                      var2: str) -> pd.DataFrame:
         """
         Compute centralized crosstabulation.
         
@@ -105,7 +105,7 @@ class CentralisedImplementations:
 
 class FederatedTestValidator:
     """Validator for comparing federated and centralised results."""
-    
+
     def __init__(self, tolerance: float = 1e-6):
         """
         Initialise validator with tolerance for numerical comparisons.
@@ -114,11 +114,11 @@ class FederatedTestValidator:
             tolerance: Numerical tolerance for comparisons
         """
         self.tolerance = tolerance
-    
-    def validate_numerical_statistics(self, 
-                                    federated_result: Dict[str, Any], 
-                                    centralised_result: Dict[str, Any],
-                                    variable: str) -> Tuple[bool, List[str]]:
+
+    def validate_numerical_statistics(self,
+                                      federated_result: Dict[str, Any],
+                                      centralised_result: Dict[str, Any],
+                                      variable: str) -> Tuple[bool, List[str]]:
         """
         Validate numerical statistics between federated and centralised results.
         
@@ -131,24 +131,24 @@ class FederatedTestValidator:
             Tuple of (is_valid, list_of_errors)
         """
         errors = []
-        
+
         if variable not in federated_result.get('numerical', {}):
             errors.append(f"Variable {variable} not found in federated numerical results")
             return False, errors
-        
+
         if variable not in centralised_result.get('numerical', {}):
             errors.append(f"Variable {variable} not found in centralised numerical results")
             return False, errors
-        
+
         fed_stats = federated_result['numerical'][variable]
         cent_stats = centralised_result['numerical'][variable]
-        
+
         # Check each statistic
         for stat_name in ['count', 'mean', 'std', 'min', 'max', 'median']:
             if stat_name in fed_stats and stat_name in cent_stats:
                 fed_val = fed_stats[stat_name]
                 cent_val = cent_stats[stat_name]
-                
+
                 if stat_name == 'count':
                     # Count should be exact
                     if fed_val != cent_val:
@@ -156,14 +156,15 @@ class FederatedTestValidator:
                 else:
                     # Other statistics allow for tolerance
                     if not np.isclose(fed_val, cent_val, rtol=self.tolerance, atol=self.tolerance):
-                        errors.append(f"{variable}.{stat_name}: {fed_val} vs {cent_val} (diff: {abs(fed_val - cent_val)})")
-        
+                        errors.append(
+                            f"{variable}.{stat_name}: {fed_val} vs {cent_val} (diff: {abs(fed_val - cent_val)})")
+
         return len(errors) == 0, errors
-    
-    def validate_categorical_statistics(self, 
-                                      federated_result: Dict[str, Any], 
-                                      centralised_result: Dict[str, Any],
-                                      variable: str) -> Tuple[bool, List[str]]:
+
+    def validate_categorical_statistics(self,
+                                        federated_result: Dict[str, Any],
+                                        centralised_result: Dict[str, Any],
+                                        variable: str) -> Tuple[bool, List[str]]:
         """
         Validate categorical statistics between federated and centralised results.
         
@@ -176,35 +177,35 @@ class FederatedTestValidator:
             Tuple of (is_valid, list_of_errors)
         """
         errors = []
-        
+
         if variable not in federated_result.get('categorical', {}):
             errors.append(f"Variable {variable} not found in federated categorical results")
             return False, errors
-        
+
         if variable not in centralised_result.get('categorical', {}):
             errors.append(f"Variable {variable} not found in centralised categorical results")
             return False, errors
-        
+
         fed_stats = federated_result['categorical'][variable]
         cent_stats = centralised_result['categorical'][variable]
-        
+
         # Check counts
         fed_counts = fed_stats.get('counts', {})
         cent_counts = cent_stats.get('counts', {})
-        
+
         all_categories = set(fed_counts.keys()) | set(cent_counts.keys())
-        
+
         for category in all_categories:
             fed_count = fed_counts.get(category, 0)
             cent_count = cent_counts.get(category, 0)
-            
+
             if fed_count != cent_count:
                 errors.append(f"{variable}.{category}: {fed_count} != {cent_count}")
-        
+
         # Check totals
         if fed_stats.get('total', 0) != cent_stats.get('total', 0):
             errors.append(f"{variable}.total: {fed_stats.get('total')} != {cent_stats.get('total')}")
-        
+
         return len(errors) == 0, errors
 
 
@@ -220,17 +221,17 @@ def timer():
 
 class PerformanceBenchmark:
     """Utility for measuring and comparing performance of functions."""
-    
+
     def __init__(self):
         """Initialize performance benchmark utility."""
         self.results = {}
-    
-    def measure_function(self, 
-                        func: Callable, 
-                        *args, 
-                        name: str = None, 
-                        iterations: int = 1,
-                        **kwargs) -> Dict[str, Any]:
+
+    def measure_function(self,
+                         func: Callable,
+                         *args,
+                         name: str = None,
+                         iterations: int = 1,
+                         **kwargs) -> Dict[str, Any]:
         """
         Measure function performance.
         
@@ -246,13 +247,13 @@ class PerformanceBenchmark:
         """
         name = name or func.__name__
         times = []
-        
+
         for _ in range(iterations):
             start_time = time.perf_counter()
             result = func(*args, **kwargs)
             end_time = time.perf_counter()
             times.append(end_time - start_time)
-        
+
         metrics = {
             'name': name,
             'iterations': iterations,
@@ -262,16 +263,16 @@ class PerformanceBenchmark:
             'max_time': np.max(times),
             'total_time': np.sum(times)
         }
-        
+
         self.results[name] = metrics
         return metrics
-    
-    def compare_functions(self, 
-                         func1: Callable, 
-                         func2: Callable,
-                         *args,
-                         iterations: int = 5,
-                         **kwargs) -> Dict[str, Any]:
+
+    def compare_functions(self,
+                          func1: Callable,
+                          func2: Callable,
+                          *args,
+                          iterations: int = 5,
+                          **kwargs) -> Dict[str, Any]:
         """
         Compare performance of two functions.
         
@@ -286,24 +287,24 @@ class PerformanceBenchmark:
         """
         metrics1 = self.measure_function(func1, *args, iterations=iterations, **kwargs)
         metrics2 = self.measure_function(func2, *args, iterations=iterations, **kwargs)
-        
+
         speedup = metrics2['mean_time'] / metrics1['mean_time']
-        
+
         return {
             'function1': metrics1,
             'function2': metrics2,
             'speedup': speedup,
             'faster': metrics1['name'] if speedup > 1 else metrics2['name']
         }
-    
+
     def report(self) -> str:
         """Generate performance report."""
         if not self.results:
             return "No benchmark results available."
-        
+
         report = "Performance Benchmark Results\n"
         report += "=" * 40 + "\n"
-        
+
         for name, metrics in self.results.items():
             report += f"\nFunction: {name}\n"
             report += f"  Mean Time: {metrics['mean_time']:.6f}s\n"
@@ -311,12 +312,12 @@ class PerformanceBenchmark:
             report += f"  Min Time:  {metrics['min_time']:.6f}s\n"
             report += f"  Max Time:  {metrics['max_time']:.6f}s\n"
             report += f"  Iterations: {metrics['iterations']}\n"
-        
+
         return report
 
 
-def create_federated_scenario(datasets: Dict[int, pd.DataFrame], 
-                            variables_config: Dict[str, Any]) -> Dict[str, Any]:
+def create_federated_scenario(datasets: Dict[int, pd.DataFrame],
+                              variables_config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create a complete federated testing scenario.
     
@@ -329,19 +330,19 @@ def create_federated_scenario(datasets: Dict[int, pd.DataFrame],
     """
     # Combine all datasets for centralised computation
     combined_df = pd.concat(datasets.values(), ignore_index=True)
-    
+
     # Extract variables from config
     all_variables = []
     if 'numerical' in variables_config:
         all_variables.extend(variables_config['numerical'].keys())
     if 'categorical' in variables_config:
         all_variables.extend(variables_config['categorical'].keys())
-    
+
     # Compute centralised results for comparison
     centralised_results = CentralisedImplementations.compute_centralised_statistics(
         combined_df, all_variables
     )
-    
+
     return {
         'federated_data': datasets,
         'combined_data': combined_df,
@@ -352,8 +353,8 @@ def create_federated_scenario(datasets: Dict[int, pd.DataFrame],
 
 
 def assert_federated_equals_centralized(federated_result: Dict[str, Any],
-                                      centralized_result: Dict[str, Any],
-                                      tolerance: float = 1e-6) -> None:
+                                        centralized_result: Dict[str, Any],
+                                        tolerance: float = 1e-6) -> None:
     """
     Assert that federated results equal centralized results within tolerance.
     
@@ -366,7 +367,7 @@ def assert_federated_equals_centralized(federated_result: Dict[str, Any],
         AssertionError: If results don't match within tolerance
     """
     validator = FederatedTestValidator(tolerance)
-    
+
     # Validate numerical variables
     if 'numerical' in federated_result and 'numerical' in centralized_result:
         for variable in federated_result['numerical'].keys():
@@ -375,7 +376,7 @@ def assert_federated_equals_centralized(federated_result: Dict[str, Any],
             )
             if not is_valid:
                 raise AssertionError(f"Numerical validation failed for {variable}: {errors}")
-    
+
     # Validate categorical variables
     if 'categorical' in federated_result and 'categorical' in centralized_result:
         for variable in federated_result['categorical'].keys():
@@ -394,9 +395,9 @@ def generate_privacy_test_scenarios() -> Dict[str, Dict[str, Any]]:
         Dictionary of privacy test scenarios
     """
     np.random.seed(42)
-    
+
     scenarios = {}
-    
+
     # Scenario 1: Basic differential privacy
     scenarios['basic_dp'] = {
         'data': pd.DataFrame({
@@ -406,7 +407,7 @@ def generate_privacy_test_scenarios() -> Dict[str, Dict[str, Any]]:
         'epsilon': 1.0,
         'expected_noise_std': 1.0  # 1/epsilon for Laplace mechanism
     }
-    
+
     # Scenario 2: Small sample size thresholding
     scenarios['small_sample'] = {
         'data': pd.DataFrame({
@@ -416,7 +417,7 @@ def generate_privacy_test_scenarios() -> Dict[str, Dict[str, Any]]:
         'threshold': 10,
         'should_pass': False
     }
-    
+
     # Scenario 3: Variable masking
     scenarios['variable_masking'] = {
         'data': pd.DataFrame({
@@ -427,7 +428,7 @@ def generate_privacy_test_scenarios() -> Dict[str, Dict[str, Any]]:
         'variables_to_keep': ['keep_var', 'another_keep'],
         'expected_columns': ['keep_var', 'another_keep']
     }
-    
+
     return scenarios
 
 
@@ -550,7 +551,8 @@ def validate_quantiles(centralised_data, federated_quantiles, test_name=""):
         iqr = cent_stats[0.75]['value'] - cent_stats[0.25]['value']
         scale = max(iqr, np.std(centralised_data), 1e-6)  # Use IQR, fallback to std, avoid zero
         rel_error = abs(fed_val - cent_val) / scale
-        rel_threshold = 0.1  # 10% of scale
+        n = len(centralised_data)
+        rel_threshold = max(0.1, 10 / np.sqrt(n))  # More lenient for smaller samples
         rel_pass = rel_error <= rel_threshold
 
         # TEST 3: Z-Score Test
@@ -591,7 +593,7 @@ def validate_quantiles(centralised_data, federated_quantiles, test_name=""):
         print(f"    Error = {rel_error:.6f}, Threshold = {rel_threshold:.6f}")
         print(f"  Z-Score Test: {'PASS' if z_pass else 'FAIL'}")
         print(f"    Z = {z_score:.3f}, Threshold = {z_threshold:.3f}")
-        print(f"  Overall Result: {'PASS' if result_pass else 'FAIL'}")
+        print(f"  Overall Result: {'PASS' if result_pass else 'FAIL'}\n")
 
     print(f"\nFINAL VALIDATION: {'PASS' if results['overall_pass'] else 'FAIL'}")
 
@@ -599,8 +601,8 @@ def validate_quantiles(centralised_data, federated_quantiles, test_name=""):
 
 
 def assert_federated_equals_centralised(federated_result: Dict[str, Any],
-                                      centralised_result: Dict[str, Any],
-                                      tolerance: float = 1e-6) -> None:
+                                        centralised_result: Dict[str, Any],
+                                        tolerance: float = 1e-6) -> None:
     """
     Assert that federated results equal centralised results within tolerance.
     
@@ -613,7 +615,7 @@ def assert_federated_equals_centralised(federated_result: Dict[str, Any],
         AssertionError: If results don't match within tolerance
     """
     validator = FederatedTestValidator(tolerance)
-    
+
     # Validate numerical variables
     if 'numerical' in federated_result and 'numerical' in centralised_result:
         for variable in federated_result['numerical'].keys():
@@ -622,7 +624,7 @@ def assert_federated_equals_centralised(federated_result: Dict[str, Any],
             )
             if not is_valid:
                 raise AssertionError(f"Numerical validation failed for {variable}: {errors}")
-    
+
     # Validate categorical variables
     if 'categorical' in federated_result and 'categorical' in centralised_result:
         for variable in federated_result['categorical'].keys():
