@@ -24,7 +24,7 @@ class TestMaskUnnecessaryVariables:
     def test_basic_variable_masking(self, mixed_data_sample):
         """Test basic variable masking functionality."""
         original_columns = mixed_data_sample.columns.tolist()
-        variables_to_keep = ['age', 'gender', 'organization_id']
+        variables_to_keep = ['age', 'gender']
         
         result = mask_unnecessary_variables(mixed_data_sample, variables_to_keep)
         

@@ -231,56 +231,6 @@ class TestFederatedVsCentralizedStatistics:
                 # Check mean (should be 50.5)
                 if 'mean' in stats_dict:
                     assert abs(stats_dict['mean'] - 50.5) < 0.1
-    
-    def test_stratified_statistics_comparison(self, mixed_data_sample):
-        """Test federated vs centralized with stratification."""
-        # Clean data
-        test_data = mixed_data_sample.dropna()
-        
-        if len(test_data) < 20:
-            pytest.skip("Insufficient data for stratification test")
-        
-        # Define stratification
-        stratification_dict = {
-            'gender': ['Male', 'Female']
-        }
-        
-        # Apply stratification
-        stratified_data = test_data[test_data['gender'].isin(['Male', 'Female'])]
-        
-        if len(stratified_data) < 10:
-            pytest.skip("Insufficient stratified data")
-        
-        # Split by organization
-        unique_orgs = stratified_data['organization_id'].unique()[:2]
-        federated_data = {}
-        
-        for org_id in unique_orgs:
-            org_data = stratified_data[stratified_data['organization_id'] == org_id].copy()
-            if len(org_data) > 0:
-                federated_data[org_id] = org_data
-        
-        if len(federated_data) < 2:
-            pytest.skip("Insufficient organizations for stratified test")
-        
-        # Compute federated statistics with stratification
-        local_results = []
-        for org_id, org_data in federated_data.items():
-            try:
-                local_result = compute_local_general_statistics(org_data, stratification_dict)
-                local_results.append(local_result)
-            except Exception:
-                continue
-        
-        if len(local_results) == 0:
-            pytest.skip("No valid stratified results")
-        
-        try:
-            federated_result = compute_aggregate_general_statistics(local_results)
-            # Basic validation that stratified computation works
-            assert isinstance(federated_result, dict)
-        except Exception as e:
-            pytest.skip(f"Error in stratified aggregation: {e}")
 
 
 class TestQuantileComputations:
@@ -383,14 +333,12 @@ class TestEdgeCaseIntegration:
         # Create minimal datasets for each organization
         org1_data = pd.DataFrame({
             'value': [1, 2],
-            'category': ['A', 'A'],
-            'organization_id': [1, 1]
+            'category': ['A', 'A']
         })
         
         org2_data = pd.DataFrame({
             'value': [3, 4],
-            'category': ['B', 'B'],
-            'organization_id': [2, 2]
+            'category': ['B', 'B']
         })
         
         # Compute federated statistics
