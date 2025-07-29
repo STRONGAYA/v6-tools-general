@@ -39,10 +39,6 @@ jobs:
         pip install pytest pytest-cov pytest-mock hypothesis faker
         pip install -e .
         
-    - name: Generate test data
-      run: |
-        python tests/test_data/synthetic_data_generator.py
-        
     - name: Run unit tests
       run: |
         pytest tests/unit/ -v --tb=short
@@ -50,6 +46,10 @@ jobs:
     - name: Run integration tests
       run: |
         pytest tests/integration/ -v --tb=short
+        
+    - name: Run empirical tests
+      run: |
+        pytest tests/empirical/ -v --tb=short
         
     - name: Run tests with coverage
       run: |
@@ -69,7 +69,7 @@ jobs:
         fail_ci_if_error: false
         
     - name: Archive test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-${{ matrix.python-version }}
@@ -133,7 +133,7 @@ jobs:
         safety check --json --output safety-report.json || true
         
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -165,7 +165,7 @@ jobs:
         pytest tests/integration/ -k "performance" --benchmark-only --benchmark-json=benchmark-results.json || true
         
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: benchmark-results

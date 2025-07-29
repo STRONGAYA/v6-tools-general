@@ -101,32 +101,44 @@ class TestDataStratificationWorkflow:
                 print(f"Mixed stratification statistics failed: {e}")
 
     def test_federated_stratification_workflow(self, mixed_data_sample):
-        """Test stratification across multiple federated organizations."""
-        # Split data by organization
-        organization_data = {}
-        unique_orgs = mixed_data_sample['organization_id'].unique()[:3]
-
-        for org_id in unique_orgs:
-            org_data = mixed_data_sample[mixed_data_sample['organization_id'] == org_id].copy()
+        """Test stratification across multiple federated organisations."""
+        # Artificially split data into multiple organisations (simulating federated setup)
+        # This avoids dependency on unrealistic 'organisation_id' field
+        organisation_data = {}
+        total_rows = len(mixed_data_sample)
+        
+        if total_rows < 15:  # Need sufficient data for 3 organisations
+            pytest.skip("Insufficient data for federated stratification test")
+        
+        # Split data into 3 organisations
+        org_size = total_rows // 3
+        for org_id in range(1, 4):
+            start_idx = (org_id - 1) * org_size
+            if org_id == 3:  # Last organisation gets remaining rows
+                end_idx = total_rows
+            else:
+                end_idx = org_id * org_size
+                
+            org_data = mixed_data_sample.iloc[start_idx:end_idx].copy()
             if len(org_data) > 5:  # Only use orgs with sufficient data
-                organization_data[org_id] = org_data
+                organisation_data[org_id] = org_data
 
-        if len(organization_data) < 2:
-            pytest.skip("Insufficient organizations for federated stratification test")
+        if len(organisation_data) < 2:
+            pytest.skip("Insufficient organisations for federated stratification test")
 
         # Define stratification
         stratification_config = {
             'gender': ['Male', 'Female']
         }
 
-        # Apply stratification to each organization
+        # Apply stratification to each organisation
         stratified_org_data = {}
-        for org_id, org_data in organization_data.items():
+        for org_id, org_data in organisation_data.items():
             stratified_data = apply_data_stratification(org_data, stratification_config)
             if len(stratified_data) > 0:
                 stratified_org_data[org_id] = stratified_data
 
-        # Compute local statistics for each stratified organization
+        # Compute local statistics for each stratified organisation
         local_results = []
         for org_id, stratified_data in stratified_org_data.items():
             try:
