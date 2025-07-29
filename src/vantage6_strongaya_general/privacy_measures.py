@@ -1101,7 +1101,7 @@ def apply_differential_privacy(df: pd.DataFrame,
     bins = kwargs.get('bins', None)
 
     # Create a copy of the variables list and potentially randomise order
-    variables_to_process = variables_list.copy()
+    variables_to_process = list(variables_list)
     if randomize_order:
         random.shuffle(variables_to_process)
         safe_log("info", f"Processing variables in randomised order")

@@ -314,19 +314,25 @@ class TestComputeLocalAdjustedDeviation:
         # Prepare test data - only use columns that exist
         test_data = sample_numerical_data[['age', 'height']].dropna()
 
-        # Mock global statistics
+        # Mock global statistics - format it like actual aggregated results
         global_stats = """{
-            'age': {'mean': 45.0, 'std': 15.0},
-            'height': {'mean': 170.0, 'std': 10.0}
+            "variable": {"0": "age", "1": "height", "2": "age", "3": "height"},
+            "statistic": {"0": "mean", "1": "mean", "2": "std", "3": "std"},
+            "value": {"0": 45.0, "1": 170.0, "2": 15.0, "3": 10.0}
         }"""
 
         result = compute_local_adjusted_deviation(test_data, global_stats)
 
         # Check result structure
         assert isinstance(result, dict)
+        assert 'adjusted_deviation' in result
 
-        # Should contain adjusted deviations for both variables
-        assert 'age' in result or 'height' in result  # At least one should be present
+        # Should contain adjusted deviations for both variables  
+        # Parse the JSON result to check the content
+        import json
+        deviation_data = json.loads(result['adjusted_deviation'])
+        variables_present = set(deviation_data['variable'].values())
+        assert 'age' in variables_present or 'height' in variables_present
 
     def test_single_variable_deviation(self):
         """Test adjusted deviation for single variable."""
@@ -334,13 +340,15 @@ class TestComputeLocalAdjustedDeviation:
             'test_var': [10, 20, 30, 40, 50]
         })
 
-        global_stats = {
-            'test_var': {'mean': 25.0, 'std': 10.0}
-        }
+        global_stats = """{
+            "variable": {"0": "test_var", "1": "test_var"},
+            "statistic": {"0": "mean", "1": "std"},
+            "value": {"0": 25.0, "1": 10.0}
+        }"""
 
         result = compute_local_adjusted_deviation(test_data, global_stats)
 
-        assert 'test_var' in result
+        assert 'adjusted_deviation' in result
 
 
 class TestComputeAggregateAdjustedDeviation:
@@ -355,7 +363,11 @@ class TestComputeAggregateAdjustedDeviation:
         org2_data = pd.DataFrame({'age': np.random.normal(47, 12, 150)})
 
         # Mock global statistics
-        global_stats = {'age': {'mean': 46.0, 'std': 11.0}}
+        global_stats = """{
+            "variable": {"0": "age", "1": "age"},
+            "statistic": {"0": "mean", "1": "std"},
+            "value": {"0": 46.0, "1": 11.0}
+        }"""
 
         # Compute local adjusted deviations
         local_result1 = compute_local_adjusted_deviation(org1_data, global_stats)
@@ -379,7 +391,11 @@ class TestComputeAggregateAdjustedDeviation:
         np.random.seed(42)
 
         org_data = pd.DataFrame({'test_var': np.random.normal(25, 5, 100)})
-        global_stats = {'test_var': {'mean': 25.0, 'std': 5.0}}
+        global_stats = """{
+            "variable": {"0": "test_var", "1": "test_var"},
+            "statistic": {"0": "mean", "1": "std"},
+            "value": {"0": 25.0, "1": 5.0}
+        }"""
 
         local_result = compute_local_adjusted_deviation(org_data, global_stats)
         aggregate_result = compute_aggregate_adjusted_deviation([local_result])
