@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -55,11 +55,33 @@ jobs:
       run: |
         pytest --cov=vantage6_strongaya_general --cov-report=term-missing --cov-report=html --cov-report=json
 
-    - name: Extract and display coverage percentage
+    - name: Extract coverage percentage and create badge
       run: |
         COVERAGE=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
         echo "::notice title=Coverage Percentage::Coverage: $COVERAGE%"
         echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
+        
+        # Determine color based on coverage
+        if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+          COLOR="brightgreen"
+        elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+          COLOR="yellow"  
+        elif (( $(echo "$COVERAGE >= 40" | bc -l) )); then
+          COLOR="orange"
+        else
+          COLOR="red"
+        fi
+        
+        curl -o tests/coverage-badge.svg "https://img.shields.io/badge/coverage-$COVERAGE%25-$COLOR"
+
+    - name: Commit coverage badge
+      if: github.ref == 'refs/heads/main'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add tests/coverage-badge.svg
+        git diff --staged --quiet || git commit -m "Update coverage badge to $COVERAGE_PERCENTAGE%"
+        git push
 
     - name: Check coverage threshold
       run: |
