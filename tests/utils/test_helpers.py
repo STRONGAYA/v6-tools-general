@@ -498,7 +498,7 @@ def compute_quantile_test_statistics(data, quantiles=[0.25, 0.5, 0.75]):
             kde = gaussian_kde(data)
             density_at_q = kde(q_val)[0]
         except Exception as e:
-            safe_log("Error in KDE estimation: " + str(e))
+            safe_log("error", "Error in KDE estimation: " + str(e))
             # Fallback: use simple density estimation
             density_at_q = 1.0  # Default if KDE fails
 

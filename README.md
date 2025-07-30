@@ -1,8 +1,14 @@
 # STRONG AYA's General Vantage6 tools
+
 ![Tests](https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg)
 [![codecov](https://codecov.io/gh/STRONGAYA/v6-tools-general/branch/main/graph/badge.svg)](https://codecov.io/gh/STRONGAYA/v6-tools-general)
+![STRONG AYA Algorithm Guideline Conformity: Pending](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-pending-yellow)
+<!--
+To show the approved badge instead, use:
+![STRONG AYA Algorithm Guideline Conformity: Approved](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-approved-brightgreen)
+-->
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Licence](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # Purpose of this repository
 
@@ -27,7 +33,8 @@ The various functions are organised in different sections, consisting of:
 The library provides functions that can be included in a Vantage6 algorithm as the algorithm developer sees fit.
 The functions are designed to be modular and can be used independently or in combination with other functions.
 
-The library can be included in your Vantage6 algorithm by listing it in the `requirements.txt` and `setup.py` file of your
+The library can be included in your Vantage6 algorithm by listing it in the `requirements.txt` and `setup.py` file of
+your
 algorithm.
 
 ## Including the library in your Vantage6 algorithm
@@ -69,7 +76,7 @@ setup(
         'numpy',
         'pandas',
         "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.3"
-    # other dependencies
+        # other dependencies
     ]
 )
 ```
@@ -146,7 +153,8 @@ from vantage6.algorithm.client import AlgorithmClient
 # General federated algorithm functions
 from vantage6_strongaya_general.general_statistics import compute_local_general_statistics
 from vantage6_strongaya_general.miscellaneous import apply_data_stratification, set_datatypes, safe_log
-from vantage6_strongaya_general.privacy_measures import apply_sample_size_threshold, mask_unnecessary_variables, apply_differential_privacy
+from vantage6_strongaya_general.privacy_measures import apply_sample_size_threshold, mask_unnecessary_variables,
+    apply_differential_privacy
 
 
 @data(1)
@@ -197,7 +205,8 @@ pip install git+https://github.com/STRONGAYA/v6-tools-general.git
 
 # Testing
 
-This repository includes a comprehensive testing framework to ensure the reliability and correctness of all functions, especially in federated scenarios.
+This repository includes a comprehensive testing framework to ensure the reliability and correctness of all functions,
+especially in federated scenarios.
 
 ## Test Structure
 
@@ -261,21 +270,22 @@ pytest -v
 
 ### Federated vs Centralised Validation
 
-The test suite includes comprehensive empirical validation that federated statistical computations produce equivalent results to their centralised counterparts:
+The test suite includes comprehensive empirical validation that federated statistical computations produce equivalent
+results to their centralised counterparts:
 
 ```python
 # Example: Testing federated statistics match centralised
 def test_federated_equals_centralised():
     # Split data across organisations
     federated_data = split_by_organisation(test_data)
-    
+
     # Compute federated results
     local_results = [compute_local_stats(org_data) for org_data in federated_data]
     federated_result = aggregate_results(local_results)
-    
+
     # Compute centralised result
     centralised_result = compute_centralised_stats(combined_data)
-    
+
     # Validate equivalence
     assert_federated_equals_centralised(federated_result, centralised_result)
 ```
@@ -283,6 +293,7 @@ def test_federated_equals_centralised():
 ### Test Data
 
 The test suite uses synthetic datasets that:
+
 - Cover various statistical distributions (normal, skewed, uniform)
 - Include edge cases (small samples, missing data, outliers)
 - Simulate realistic medical research scenarios
@@ -291,6 +302,7 @@ The test suite uses synthetic datasets that:
 ### Continuous Integration
 
 Tests run automatically on every push and pull request via GitHub Actions:
+
 - Multiple Python versions (starting with 3.10)
 - Code coverage reporting (target >90%)
 - Performance benchmarking
@@ -298,20 +310,28 @@ Tests run automatically on every push and pull request via GitHub Actions:
 
 ### Known Test Failures
 
-Some empirical tests may occasionally fail due to the inherent mathematical differences between federated and centralised computations:
+Some empirical tests may occasionally fail due to the inherent mathematical differences between federated and
+centralised computations:
 
 **Empirical Tests (tests/empirical/)**:
-- `test_single_organisation_equivalence`: May fail due to division-by-zero issues in quantile calculations for single organisations. This doesn't affect multi-organisation federated scenarios.
-- `test_mixed_distribution_quantiles`: May fail when organisations have very different data distributions, as federated quantiles mathematically differ from centralised ones when internal distributions vary significantly.
+
+- `test_single_organisation_equivalence`: May fail due to division-by-zero issues in quantile calculations for single
+  organisations. This doesn't affect multi-organisation federated scenarios.
+- `test_mixed_distribution_quantiles`: May fail when organisations have very different data distributions, as federated
+  quantiles mathematically differ from centralised ones when internal distributions vary significantly.
 
 **What this means for usage**:
+
 - These failures are **mathematical expectations**, not bugs
 - Federated quantiles with mixed distributions across organisations will naturally differ from centralised calculations
 - Single organisation scenarios work correctly in practice, but may have edge cases in quantile computation
-- All basic statistics (mean, count, min, max) maintain mathematical equivalence between federated and centralised approaches
-- Standard deviation allows for appropriate tolerance (±15% relative, ±0.5 absolute) due to federated computation characteristics
+- All basic statistics (mean, count, min, max) maintain mathematical equivalence between federated and centralised
+  approaches
+- Standard deviation allows for appropriate tolerance (±15% relative, ±0.5 absolute) due to federated computation
+  characteristics
 
-**Unit and Integration Tests**: All should pass consistently, as they test core functionality and realistic federated workflows.
+**Unit and Integration Tests**: All should pass consistently, as they test core functionality and realistic federated
+workflows.
 
 ## Contributing to Tests
 
@@ -332,7 +352,7 @@ When contributing new functionality:
 - Use realistic synthetic data
 - Mock external dependencies (AlgorithmClient, environment variables)
 - Validate both structure and values of results
-```
+
 
 # Contributers
 
@@ -344,3 +364,4 @@ When contributing new functionality:
 
 - [STRONG AYA](https://strongaya.eu/)
 - [Vantage6](vantage6.ai)
+- [STRONG AYA Algorithm Guidelines] To be released September 2025

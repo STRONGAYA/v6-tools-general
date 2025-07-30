@@ -20,6 +20,7 @@ from typing import (
     cast,
     Dict,
     List,
+    Literal,
     Optional,
     Union,
     Tuple,
@@ -178,7 +179,11 @@ def collect_organisation_ids(
         return []
 
 
-def safe_log(level: str, message: str, variables: Optional[List[str]] = None) -> None:
+def safe_log(
+    level: Literal["info", "warn", "error"],
+    message: str,
+    variables: Optional[List[str]] = None,
+) -> None:
     """
     Safely log messages without leaking sensitive data.
 
@@ -333,7 +338,7 @@ def sum_variables(
                 if strict:
                     raise DataError(error_msg)
                 else:
-                    safe_log("warning", error_msg)
+                    safe_log("warn", error_msg)
 
     # Check for missing values
     missing_count = df[variables].isnull().sum(axis=1)
@@ -347,7 +352,7 @@ def sum_variables(
             if strict:
                 raise DataError(error_msg)
             else:
-                safe_log("warning", error_msg)
+                safe_log("warn", error_msg)
 
     # Calculate sum
     safe_log("info", f"Summing variables {variables} into '{new_variable_name}'")
