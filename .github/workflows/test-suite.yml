@@ -53,20 +53,35 @@ jobs:
         
     - name: Run tests with coverage
       run: |
-        pytest --cov=vantage6_strongaya_general --cov-report=xml --cov-report=html --cov-report=term-missing
-        
+        pytest --cov=vantage6_strongaya_general --cov-report=term-missing --cov-report=html --cov-report=json
+
+    - name: Extract coverage percentage
+      run: |
+        COVERAGE=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
+        echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
+        echo "Coverage: $COVERAGE%"
+
+    - name: Create coverage badge
+      run: |
+        COLOR="red"
+        if (( $(echo "$COVERAGE_PERCENTAGE >= 80" | bc -l) )); then
+          COLOR="brightgreen"
+        elif (( $(echo "$COVERAGE_PERCENTAGE >= 60" | bc -l) )); then
+          COLOR="yellow"
+        elif (( $(echo "$COVERAGE_PERCENTAGE >= 40" | bc -l) )); then
+          COLOR="orange"
+        fi
+        curl -o coverage-badge.svg "https://img.shields.io/badge/coverage-$COVERAGE_PERCENTAGE%25-$COLOR"
+
+    - name: Upload coverage badge
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-badge
+        path: coverage-badge.svg
+
     - name: Check coverage threshold
       run: |
         coverage report --fail-under=50
-        
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
         
     - name: Archive test results
       uses: actions/upload-artifact@v4
@@ -75,8 +90,8 @@ jobs:
         name: test-results-${{ matrix.python-version }}
         path: |
           htmlcov/
-          coverage.xml
-          
+          coverage.json
+
   lint:
     runs-on: ubuntu-latest
     

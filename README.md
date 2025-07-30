@@ -1,7 +1,7 @@
 # STRONG AYA's General Vantage6 tools
 
 ![Tests](https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg)
-[![codecov](https://codecov.io/gh/STRONGAYA/v6-tools-general/branch/main/graph/badge.svg)](https://codecov.io/gh/STRONGAYA/v6-tools-general)
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/STRONGAYA/coverage-badge-data/main/coverage.json)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licence](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![STRONG AYA Algorithm Guideline Conformity: Pending](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-pending-yellow)
