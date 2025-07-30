@@ -14,14 +14,14 @@ from vantage6_strongaya_general.miscellaneous import (
     safe_calculate,
     collect_organisation_ids,
     apply_data_stratification,
-    set_datatypes
+    set_datatypes,
 )
 
 
 class TestSafeLog:
     """Test cases for safe_log function."""
 
-    @patch('vantage6_strongaya_general.miscellaneous.info')
+    @patch("vantage6_strongaya_general.miscellaneous.info")
     def test_info_level_logging(self, mock_info):
         """Test logging at info level."""
         test_message = "This is an info message"
@@ -30,7 +30,7 @@ class TestSafeLog:
         # safe_log adds a period to messages that don't end with punctuation
         mock_info.assert_called_once_with(test_message + ".")
 
-    @patch('vantage6_strongaya_general.miscellaneous.warn')
+    @patch("vantage6_strongaya_general.miscellaneous.warn")
     def test_warn_level_logging(self, mock_warn):
         """Test logging at warn level."""
         test_message = "This is a warning message"
@@ -38,7 +38,7 @@ class TestSafeLog:
 
         mock_warn.assert_called_once_with(test_message + ".")
 
-    @patch('vantage6_strongaya_general.miscellaneous.error')
+    @patch("vantage6_strongaya_general.miscellaneous.error")
     def test_error_level_logging(self, mock_error):
         """Test logging at error level."""
         test_message = "This is an error message"
@@ -46,7 +46,7 @@ class TestSafeLog:
 
         mock_error.assert_called_once_with(test_message + ".")
 
-    @patch('vantage6_strongaya_general.miscellaneous.info')
+    @patch("vantage6_strongaya_general.miscellaneous.info")
     def test_default_level_logging(self, mock_info):
         """Test default logging level."""
         test_message = "Default level message"
@@ -69,7 +69,7 @@ class TestSafeLog:
         with pytest.raises(AttributeError):
             safe_log("info", None)
 
-    @patch('vantage6_strongaya_general.miscellaneous.info')
+    @patch("vantage6_strongaya_general.miscellaneous.info")
     def test_message_with_punctuation(self, mock_info):
         """Test that messages ending with punctuation don't get extra periods."""
         # Message with period
@@ -117,7 +117,7 @@ class TestSafeCalculate:
         """Test safe calculation with keyword arguments."""
 
         def power_function(base, exponent=2):
-            return base ** exponent
+            return base**exponent
 
         result = safe_calculate(power_function, base=3, exponent=3)
         assert result == 27
@@ -135,11 +135,11 @@ class TestSafeCalculate:
         """Test safe calculation with more complex function."""
 
         def complex_calculation(data_list):
-            return sum(x ** 2 for x in data_list) / len(data_list)
+            return sum(x**2 for x in data_list) / len(data_list)
 
         test_data = [1, 2, 3, 4, 5]
         result = safe_calculate(complex_calculation, data_list=test_data)
-        expected = sum(x ** 2 for x in test_data) / len(test_data)
+        expected = sum(x**2 for x in test_data) / len(test_data)
         assert result == expected
 
 
@@ -159,9 +159,9 @@ class TestCollectOrganisationIds:
         """Test when organization IDs are None (should fetch all)."""
         # Mock the client to return organization list
         mock_algorithm_client.organization.list.return_value = [
-            {'id': 1, 'name': 'Org1'},
-            {'id': 2, 'name': 'Org2'},
-            {'id': 3, 'name': 'Org3'}
+            {"id": 1, "name": "Org1"},
+            {"id": 2, "name": "Org2"},
+            {"id": 3, "name": "Org3"},
         ]
 
         result = collect_organisation_ids(None, mock_algorithm_client)
@@ -209,54 +209,45 @@ class TestApplyDataStratification:
 
     def test_categorical_stratification(self, mixed_data_sample):
         """Test stratification with categorical variables."""
-        stratification_dict = {
-            'gender': ['Male', 'Female']
-        }
+        stratification_dict = {"gender": ["Male", "Female"]}
 
         result = apply_data_stratification(mixed_data_sample, stratification_dict)
 
         # Result should only contain specified gender values
-        unique_genders = result['gender'].unique()
-        assert all(gender in ['Male', 'Female'] for gender in unique_genders)
+        unique_genders = result["gender"].unique()
+        assert all(gender in ["Male", "Female"] for gender in unique_genders)
 
         # Should be subset of original data
         assert len(result) <= len(mixed_data_sample)
 
     def test_numerical_range_stratification(self, mixed_data_sample):
         """Test stratification with numerical ranges."""
-        stratification_dict = {
-            'age': {'start': 30, 'end': 60}
-        }
+        stratification_dict = {"age": {"start": 30, "end": 60}}
 
         result = apply_data_stratification(mixed_data_sample, stratification_dict)
 
         # All ages should be within specified range
-        assert all(30 <= age <= 60 for age in result['age'])
+        assert all(30 <= age <= 60 for age in result["age"])
 
         # Should be subset of original data
         assert len(result) <= len(mixed_data_sample)
 
     def test_multiple_variable_stratification(self, mixed_data_sample):
         """Test stratification with multiple variables."""
-        stratification_dict = {
-            'gender': ['Male'],
-            'age': {'start': 25, 'end': 65}
-        }
+        stratification_dict = {"gender": ["Male"], "age": {"start": 25, "end": 65}}
 
         result = apply_data_stratification(mixed_data_sample, stratification_dict)
 
         # Should satisfy both conditions
-        assert all(gender == 'Male' for gender in result['gender'])
-        assert all(25 <= age <= 65 for age in result['age'])
+        assert all(gender == "Male" for gender in result["gender"])
+        assert all(25 <= age <= 65 for age in result["age"])
 
         # Should be subset of original data
         assert len(result) <= len(mixed_data_sample)
 
     def test_stratification_with_missing_column(self, mixed_data_sample):
         """Test stratification when stratification column doesn't exist."""
-        stratification_dict = {
-            'nonexistent_column': ['value1', 'value2']
-        }
+        stratification_dict = {"nonexistent_column": ["value1", "value2"]}
 
         # Should handle missing column gracefully (behavior depends on implementation)
         try:
@@ -269,9 +260,7 @@ class TestApplyDataStratification:
 
     def test_stratification_resulting_in_empty_dataframe(self, mixed_data_sample):
         """Test stratification that results in empty DataFrame."""
-        stratification_dict = {
-            'gender': ['NonexistentGender']
-        }
+        stratification_dict = {"gender": ["NonexistentGender"]}
 
         result = apply_data_stratification(mixed_data_sample, stratification_dict)
 
@@ -282,20 +271,20 @@ class TestApplyDataStratification:
     def test_stratification_with_extreme_ranges(self, mixed_data_sample):
         """Test stratification with extreme numerical ranges."""
         # Range that includes all values
-        stratification_dict_all = {
-            'age': {'start': 0, 'end': 200}
-        }
+        stratification_dict_all = {"age": {"start": 0, "end": 200}}
 
-        result_all = apply_data_stratification(mixed_data_sample, stratification_dict_all)
+        result_all = apply_data_stratification(
+            mixed_data_sample, stratification_dict_all
+        )
         # Should include most/all of the data
         assert len(result_all) > 0
 
         # Range that includes no values
-        stratification_dict_none = {
-            'age': {'start': 200, 'end': 300}
-        }
+        stratification_dict_none = {"age": {"start": 200, "end": 300}}
 
-        result_none = apply_data_stratification(mixed_data_sample, stratification_dict_none)
+        result_none = apply_data_stratification(
+            mixed_data_sample, stratification_dict_none
+        )
         # Should be empty or very small
         assert len(result_none) >= 0
 
@@ -305,50 +294,42 @@ class TestSetDatatypes:
 
     def test_set_integer_datatype(self):
         """Test setting integer datatype."""
-        test_df = pd.DataFrame({
-            'int_col': ['1', '2', '3', '4', '5'],
-            'other_col': [1.1, 2.2, 3.3, 4.4, 5.5]
-        })
+        test_df = pd.DataFrame(
+            {
+                "int_col": ["1", "2", "3", "4", "5"],
+                "other_col": [1.1, 2.2, 3.3, 4.4, 5.5],
+            }
+        )
 
-        variables_config = {
-            'int_col': {'datatype': 'int', 'inliers': [1, 2, 3, 4, 5]}
-        }
+        variables_config = {"int_col": {"datatype": "int", "inliers": [1, 2, 3, 4, 5]}}
 
         result = set_datatypes(test_df, variables_config)
 
         # Check that datatype is correctly set
-        assert pd.api.types.is_integer_dtype(result['int_col'])
+        assert pd.api.types.is_integer_dtype(result["int_col"])
         # Other columns should remain unchanged
-        assert pd.api.types.is_float_dtype(result['other_col'])
+        assert pd.api.types.is_float_dtype(result["other_col"])
 
     def test_set_float_datatype(self):
         """Test setting float datatype."""
-        test_df = pd.DataFrame({
-            'float_col': ['1.1', '2.2', '3.3'],
-            'other_col': ['a', 'b', 'c']
-        })
+        test_df = pd.DataFrame(
+            {"float_col": ["1.1", "2.2", "3.3"], "other_col": ["a", "b", "c"]}
+        )
 
-        variables_config = {
-            'float_col': {'datatype': 'float', 'inliers': [1.0, 4.0]}
-        }
+        variables_config = {"float_col": {"datatype": "float", "inliers": [1.0, 4.0]}}
 
         result = set_datatypes(test_df, variables_config)
 
         # Check that datatype is correctly set
-        assert pd.api.types.is_float_dtype(result['float_col'])
+        assert pd.api.types.is_float_dtype(result["float_col"])
         # Other columns should remain unchanged
-        assert pd.api.types.is_object_dtype(result['other_col'])
+        assert pd.api.types.is_object_dtype(result["other_col"])
 
     def test_set_string_datatype(self):
         """Test setting string datatype."""
-        test_df = pd.DataFrame({
-            'str_col': [1, 2, 3],
-            'other_col': [1.1, 2.2, 3.3]
-        })
+        test_df = pd.DataFrame({"str_col": [1, 2, 3], "other_col": [1.1, 2.2, 3.3]})
 
-        variables_config = {
-            'str_col': {'datatype': 'str', 'inliers': ['1', '2', '3']}
-        }
+        variables_config = {"str_col": {"datatype": "str", "inliers": ["1", "2", "3"]}}
 
         # The current implementation uses 'String' which may not work in all pandas versions
         try:
@@ -365,20 +346,17 @@ class TestSetDatatypes:
 
     def test_set_categorical_datatype(self):
         """Test setting categorical datatype."""
-        test_df = pd.DataFrame({
-            'cat_col': ['A', 'B', 'C', 'A', 'B'],
-            'other_col': [1, 2, 3, 4, 5]
-        })
+        test_df = pd.DataFrame(
+            {"cat_col": ["A", "B", "C", "A", "B"], "other_col": [1, 2, 3, 4, 5]}
+        )
 
-        variables_config = {
-            'cat_col': {'datatype': 'str', 'inliers': ['A', 'B', 'C']}
-        }
+        variables_config = {"cat_col": {"datatype": "str", "inliers": ["A", "B", "C"]}}
 
         try:
             result = set_datatypes(test_df, variables_config)
             # If successful, check basic structure
             assert isinstance(result, pd.DataFrame)
-            assert 'cat_col' in result.columns
+            assert "cat_col" in result.columns
         except TypeError as e:
             if "String" in str(e):
                 pytest.skip("String dtype not supported in current pandas version")
@@ -387,26 +365,28 @@ class TestSetDatatypes:
 
     def test_multiple_datatype_setting(self):
         """Test setting datatypes for multiple columns."""
-        test_df = pd.DataFrame({
-            'int_col': ['10', '20', '30'],
-            'float_col': ['1.5', '2.5', '3.5'],
-            'str_col': [100, 200, 300],
-            'unchanged_col': ['x', 'y', 'z']
-        })
+        test_df = pd.DataFrame(
+            {
+                "int_col": ["10", "20", "30"],
+                "float_col": ["1.5", "2.5", "3.5"],
+                "str_col": [100, 200, 300],
+                "unchanged_col": ["x", "y", "z"],
+            }
+        )
 
         variables_config = {
-            'int_col': {'datatype': 'int', 'inliers': [10, 30]},
-            'float_col': {'datatype': 'float', 'inliers': [1.0, 4.0]},
-            'str_col': {'datatype': 'str', 'inliers': ['100', '200', '300']}
+            "int_col": {"datatype": "int", "inliers": [10, 30]},
+            "float_col": {"datatype": "float", "inliers": [1.0, 4.0]},
+            "str_col": {"datatype": "str", "inliers": ["100", "200", "300"]},
         }
 
         try:
             result = set_datatypes(test_df, variables_config)
 
             # Check datatypes that should work
-            assert result['int_col'].dtype.name == 'Int64'
-            assert result['float_col'].dtype.name == 'Float64'
-            assert pd.api.types.is_object_dtype(result['unchanged_col'])
+            assert result["int_col"].dtype.name == "Int64"
+            assert result["float_col"].dtype.name == "Float64"
+            assert pd.api.types.is_object_dtype(result["unchanged_col"])
 
         except TypeError as e:
             if "String" in str(e):
@@ -416,12 +396,10 @@ class TestSetDatatypes:
 
     def test_invalid_datatype_conversion(self):
         """Test handling of invalid datatype conversions."""
-        test_df = pd.DataFrame({
-            'problematic_col': ['abc', 'def', 'ghi']
-        })
+        test_df = pd.DataFrame({"problematic_col": ["abc", "def", "ghi"]})
 
         variables_config = {
-            'problematic_col': {'datatype': 'int', 'inliers': [1, 2, 3]}
+            "problematic_col": {"datatype": "int", "inliers": [1, 2, 3]}
         }
 
         # Should handle conversion errors gracefully
@@ -443,7 +421,7 @@ class TestSetDatatypes:
     def test_missing_column_in_config(self, mixed_data_sample):
         """Test when configuration references non-existent column."""
         variables_config = {
-            'nonexistent_column': {'datatype': 'int', 'inliers': [1, 2, 3]}
+            "nonexistent_column": {"datatype": "int", "inliers": [1, 2, 3]}
         }
 
         # Should handle missing column gracefully
@@ -456,44 +434,38 @@ class TestSetDatatypes:
 
     def test_inliers_filtering(self):
         """Test that inliers parameter affects data filtering."""
-        test_df = pd.DataFrame({
-            'test_col': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        })
+        test_df = pd.DataFrame({"test_col": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
 
-        variables_config = {
-            'test_col': {'datatype': 'int', 'inliers': [3, 7]}
-        }
+        variables_config = {"test_col": {"datatype": "int", "inliers": [3, 7]}}
 
         result = set_datatypes(test_df, variables_config)
 
         # Depending on implementation, inliers might filter data
         # Check that result is reasonable
         assert isinstance(result, pd.DataFrame)
-        assert 'test_col' in result.columns
+        assert "test_col" in result.columns
 
 
 class TestMiscellaneousIntegration:
     """Integration tests for miscellaneous functions working together."""
 
-    def test_complete_data_preprocessing_pipeline(self, mixed_data_sample, mock_algorithm_client):
+    def test_complete_data_preprocessing_pipeline(
+        self, mixed_data_sample, mock_algorithm_client
+    ):
         """Test complete data preprocessing pipeline."""
         # Step 1: Collect organization IDs
         org_ids = collect_organisation_ids(None, mock_algorithm_client)
         assert isinstance(org_ids, list)
 
         # Step 2: Set datatypes - use only types that work
-        variables_config = {
-            'age': {'datatype': 'int', 'inliers': [18, 100]}
-        }
+        variables_config = {"age": {"datatype": "int", "inliers": [18, 100]}}
 
         try:
             typed_data = set_datatypes(mixed_data_sample, variables_config)
-            assert typed_data['age'].dtype.name == 'Int64'
+            assert typed_data["age"].dtype.name == "Int64"
 
             # Step 3: Apply stratification
-            stratification_dict = {
-                'age': {'start': 20, 'end': 80}
-            }
+            stratification_dict = {"age": {"start": 20, "end": 80}}
 
             stratified_data = apply_data_stratification(typed_data, stratification_dict)
             assert len(stratified_data) <= len(typed_data)
@@ -504,7 +476,9 @@ class TestMiscellaneousIntegration:
         except Exception as e:
             # If any step fails, that's acceptable for this integration test
             print(f"Pipeline step failed: {e}")
-            assert isinstance(mixed_data_sample, pd.DataFrame)  # At least original data is valid
+            assert isinstance(
+                mixed_data_sample, pd.DataFrame
+            )  # At least original data is valid
 
     def test_safe_functions_error_handling(self):
         """Test that safe functions handle errors appropriately."""
@@ -517,7 +491,7 @@ class TestMiscellaneousIntegration:
         def problematic_function(x):
             if x < 0:
                 raise ValueError("Negative input")
-            return x ** 0.5
+            return x**0.5
 
         # Should not raise exception
         result1 = safe_calculate(problematic_function, x=9)
@@ -532,8 +506,8 @@ class TestMiscellaneousIntegration:
 
         # Apply transformations
         variables_config = {
-            'age': {'datatype': 'int', 'inliers': [0, 120]},
-            'height': {'datatype': 'float', 'inliers': [100, 250]}
+            "age": {"datatype": "int", "inliers": [0, 120]},
+            "height": {"datatype": "float", "inliers": [100, 250]},
         }
 
         transformed_data = set_datatypes(original_data, variables_config)
@@ -543,8 +517,8 @@ class TestMiscellaneousIntegration:
         assert all(col in transformed_data.columns for col in original_data.columns)
 
         # Check that numerical relationships are preserved (approximately)
-        age_correlation_before = original_data['age'].corr(original_data['height'])
-        age_correlation_after = transformed_data['age'].corr(transformed_data['height'])
+        age_correlation_before = original_data["age"].corr(original_data["height"])
+        age_correlation_after = transformed_data["age"].corr(transformed_data["height"])
 
         # Correlation should be similar (allowing for some numerical differences)
         assert abs(age_correlation_before - age_correlation_after) < 0.1

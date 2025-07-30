@@ -4,7 +4,7 @@
 ![Tests](https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg)
 [![codecov](https://codecov.io/gh/STRONGAYA/v6-tools-general/branch/main/graph/badge.svg)](https://codecov.io/gh/STRONGAYA/v6-tools-general)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # Purpose of this repository
 

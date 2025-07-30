@@ -10,7 +10,9 @@ import pandas as pd
 import numpy as np
 
 from vantage6_strongaya_general.miscellaneous import apply_data_stratification
-from vantage6_strongaya_general.general_statistics import compute_local_general_statistics
+from vantage6_strongaya_general.general_statistics import (
+    compute_local_general_statistics,
+)
 
 
 class TestDataStratificationWorkflow:
@@ -19,21 +21,20 @@ class TestDataStratificationWorkflow:
     def test_categorical_stratification_workflow(self, mixed_data_sample):
         """Test complete workflow with categorical stratification."""
         # Define categorical stratification
-        stratification_config = {
-            'gender': ['Male', 'Female'],
-            'treatment': ['A', 'B']
-        }
+        stratification_config = {"gender": ["Male", "Female"], "treatment": ["A", "B"]}
 
         # Apply stratification
-        stratified_data = apply_data_stratification(mixed_data_sample, stratification_config)
+        stratified_data = apply_data_stratification(
+            mixed_data_sample, stratification_config
+        )
 
         # Verify stratification worked
         if len(stratified_data) > 0:
-            unique_genders = stratified_data['gender'].unique()
-            unique_treatments = stratified_data['treatment'].unique()
+            unique_genders = stratified_data["gender"].unique()
+            unique_treatments = stratified_data["treatment"].unique()
 
-            assert all(gender in ['Male', 'Female'] for gender in unique_genders)
-            assert all(treatment in ['A', 'B'] for treatment in unique_treatments)
+            assert all(gender in ["Male", "Female"] for gender in unique_genders)
+            assert all(treatment in ["A", "B"] for treatment in unique_treatments)
 
         # Compute statistics on stratified data
         if len(stratified_data) > 0:
@@ -47,23 +48,25 @@ class TestDataStratificationWorkflow:
     def test_numerical_range_stratification_workflow(self, mixed_data_sample):
         """Test complete workflow with numerical range stratification."""
         # Define numerical range stratification
-        stratification_config = {
-            'age': {'start': 30, 'end': 65}
-        }
+        stratification_config = {"age": {"start": 30, "end": 65}}
 
         # Apply stratification
-        stratified_data = apply_data_stratification(mixed_data_sample, stratification_config)
+        stratified_data = apply_data_stratification(
+            mixed_data_sample, stratification_config
+        )
 
         # Verify age ranges
-        if len(stratified_data) > 0 and 'age' in stratified_data.columns:
-            ages = stratified_data['age'].dropna()
+        if len(stratified_data) > 0 and "age" in stratified_data.columns:
+            ages = stratified_data["age"].dropna()
             if len(ages) > 0:
                 assert all(30 <= age <= 65 for age in ages)
 
         # Compute statistics on stratified data
         if len(stratified_data) > 0:
             try:
-                stats_result = compute_local_general_statistics(stratified_data, stratification_config)
+                stats_result = compute_local_general_statistics(
+                    stratified_data, stratification_config
+                )
                 assert isinstance(stats_result, dict)
             except Exception as e:
                 print(f"Statistics computation failed on age-stratified data: {e}")
@@ -72,30 +75,34 @@ class TestDataStratificationWorkflow:
         """Test workflow with both categorical and numerical stratification."""
         # Define mixed stratification
         stratification_config = {
-            'gender': ['Male', 'Female'],
-            'age': {'start': 25, 'end': 70}
+            "gender": ["Male", "Female"],
+            "age": {"start": 25, "end": 70},
         }
 
         # Apply stratification
-        stratified_data = apply_data_stratification(mixed_data_sample, stratification_config)
+        stratified_data = apply_data_stratification(
+            mixed_data_sample, stratification_config
+        )
 
         # Verify both constraints
         if len(stratified_data) > 0:
             # Check gender constraint
-            if 'gender' in stratified_data.columns:
-                unique_genders = stratified_data['gender'].unique()
-                assert all(gender in ['Male', 'Female'] for gender in unique_genders)
+            if "gender" in stratified_data.columns:
+                unique_genders = stratified_data["gender"].unique()
+                assert all(gender in ["Male", "Female"] for gender in unique_genders)
 
             # Check age constraint
-            if 'age' in stratified_data.columns:
-                ages = stratified_data['age'].dropna()
+            if "age" in stratified_data.columns:
+                ages = stratified_data["age"].dropna()
                 if len(ages) > 0:
                     assert all(25 <= age <= 70 for age in ages)
 
         # Compute statistics on stratified data
         if len(stratified_data) > 0:
             try:
-                stats_result = compute_local_general_statistics(stratified_data, stratification_config)
+                stats_result = compute_local_general_statistics(
+                    stratified_data, stratification_config
+                )
                 assert isinstance(stats_result, dict)
             except Exception as e:
                 print(f"Mixed stratification statistics failed: {e}")
@@ -106,10 +113,10 @@ class TestDataStratificationWorkflow:
         # This avoids dependency on unrealistic 'organisation_id' field
         organisation_data = {}
         total_rows = len(mixed_data_sample)
-        
+
         if total_rows < 15:  # Need sufficient data for 3 organisations
             pytest.skip("Insufficient data for federated stratification test")
-        
+
         # Split data into 3 organisations
         org_size = total_rows // 3
         for org_id in range(1, 4):
@@ -118,7 +125,7 @@ class TestDataStratificationWorkflow:
                 end_idx = total_rows
             else:
                 end_idx = org_id * org_size
-                
+
             org_data = mixed_data_sample.iloc[start_idx:end_idx].copy()
             if len(org_data) > 5:  # Only use orgs with sufficient data
                 organisation_data[org_id] = org_data
@@ -127,9 +134,7 @@ class TestDataStratificationWorkflow:
             pytest.skip("Insufficient organisations for federated stratification test")
 
         # Define stratification
-        stratification_config = {
-            'gender': ['Male', 'Female']
-        }
+        stratification_config = {"gender": ["Male", "Female"]}
 
         # Apply stratification to each organisation
         stratified_org_data = {}
@@ -142,7 +147,9 @@ class TestDataStratificationWorkflow:
         local_results = []
         for org_id, stratified_data in stratified_org_data.items():
             try:
-                local_result = compute_local_general_statistics(stratified_data, stratification_config)
+                local_result = compute_local_general_statistics(
+                    stratified_data, stratification_config
+                )
                 local_results.append(local_result)
             except Exception as e:
                 print(f"Local statistics failed for org {org_id}: {e}")
@@ -154,10 +161,10 @@ class TestDataStratificationWorkflow:
             for result in local_results:
                 assert isinstance(result, dict)
                 # Should have either numerical or categorical results
-                has_results = (
-                        ('numerical' in result and result['numerical']) or
-                        ('categorical' in result and result['categorical'])
+                has_results = ("numerical" in result and result["numerical"]) or (
+                    "categorical" in result and result["categorical"]
                 )
+                # TODO assert has_results and check if results are accurate
                 # Note: might be empty if stratification filtered out all data
 
     def test_stratification_preserves_data_integrity(self, mixed_data_sample):
@@ -167,10 +174,12 @@ class TestDataStratificationWorkflow:
 
         # Apply stratification
         stratification_config = {
-            'gender': ['Male', 'Female', 'Other']  # Include all possible values
+            "gender": ["Male", "Female", "Other"]  # Include all possible values
         }
 
-        stratified_data = apply_data_stratification(mixed_data_sample, stratification_config)
+        stratified_data = apply_data_stratification(
+            mixed_data_sample, stratification_config
+        )
 
         # Check column preservation
         assert set(stratified_data.columns) == original_columns
@@ -190,34 +199,36 @@ class TestDataStratificationWorkflow:
                 continue
 
             # Try different stratification configurations
-            if 'value' in test_data.columns:
+            if "value" in test_data.columns:
                 # Try numerical stratification
-                stratification_config = {
-                    'value': {'start': 0, 'end': 1000}
-                }
+                stratification_config = {"value": {"start": 0, "end": 1000}}
 
                 try:
-                    stratified_data = apply_data_stratification(test_data, stratification_config)
+                    stratified_data = apply_data_stratification(
+                        test_data, stratification_config
+                    )
                     assert isinstance(stratified_data, pd.DataFrame)
                     assert len(stratified_data) <= len(test_data)
                 except Exception as e:
                     # Edge cases might fail, which is acceptable
                     print(f"Numerical stratification failed for {scenario_name}: {e}")
 
-            if 'category' in test_data.columns:
+            if "category" in test_data.columns:
                 # Try categorical stratification
-                unique_categories = test_data['category'].dropna().unique()
+                unique_categories = test_data["category"].dropna().unique()
                 if len(unique_categories) > 0:
-                    stratification_config = {
-                        'category': list(unique_categories)
-                    }
+                    stratification_config = {"category": list(unique_categories)}
 
                     try:
-                        stratified_data = apply_data_stratification(test_data, stratification_config)
+                        stratified_data = apply_data_stratification(
+                            test_data, stratification_config
+                        )
                         assert isinstance(stratified_data, pd.DataFrame)
                         assert len(stratified_data) <= len(test_data)
                     except Exception as e:
-                        print(f"Categorical stratification failed for {scenario_name}: {e}")
+                        print(
+                            f"Categorical stratification failed for {scenario_name}: {e}"
+                        )
 
     def test_no_stratification_equivalence(self, mixed_data_sample):
         """Test that no stratification returns original data."""
@@ -237,12 +248,10 @@ class TestDataStratificationWorkflow:
         # Set some gender values to NaN
         np.random.seed(42)
         missing_mask = np.random.random(len(test_data)) < 0.2  # 20% missing
-        test_data.loc[missing_mask, 'gender'] = np.nan
+        test_data.loc[missing_mask, "gender"] = np.nan
 
         # Apply stratification
-        stratification_config = {
-            'gender': ['Male', 'Female']
-        }
+        stratification_config = {"gender": ["Male", "Female"]}
 
         stratified_data = apply_data_stratification(test_data, stratification_config)
 
@@ -250,42 +259,46 @@ class TestDataStratificationWorkflow:
         assert isinstance(stratified_data, pd.DataFrame)
 
         # Check that non-missing stratified values meet criteria
-        if len(stratified_data) > 0 and 'gender' in stratified_data.columns:
-            non_missing_genders = stratified_data['gender'].dropna().unique()
+        if len(stratified_data) > 0 and "gender" in stratified_data.columns:
+            non_missing_genders = stratified_data["gender"].dropna().unique()
             if len(non_missing_genders) > 0:
-                assert all(gender in ['Male', 'Female'] for gender in non_missing_genders)
+                assert all(
+                    gender in ["Male", "Female"] for gender in non_missing_genders
+                )
 
     def test_complex_stratification_combinations(self, mixed_data_sample):
         """Test complex stratification with multiple constraints."""
         # Define complex stratification
         stratification_config = {
-            'gender': ['Male', 'Female'],
-            'age': {'start': 30, 'end': 60},
-            'treatment': ['A', 'B', 'C']
+            "gender": ["Male", "Female"],
+            "age": {"start": 30, "end": 60},
+            "treatment": ["A", "B", "C"],
         }
 
         # Apply stratification
-        stratified_data = apply_data_stratification(mixed_data_sample, stratification_config)
+        stratified_data = apply_data_stratification(
+            mixed_data_sample, stratification_config
+        )
 
         # Verify all constraints are met
         if len(stratified_data) > 0:
             # Gender constraint
-            if 'gender' in stratified_data.columns:
-                genders = stratified_data['gender'].dropna().unique()
+            if "gender" in stratified_data.columns:
+                genders = stratified_data["gender"].dropna().unique()
                 if len(genders) > 0:
-                    assert all(gender in ['Male', 'Female'] for gender in genders)
+                    assert all(gender in ["Male", "Female"] for gender in genders)
 
             # Age constraint
-            if 'age' in stratified_data.columns:
-                ages = stratified_data['age'].dropna()
+            if "age" in stratified_data.columns:
+                ages = stratified_data["age"].dropna()
                 if len(ages) > 0:
                     assert all(30 <= age <= 60 for age in ages)
 
             # Treatment constraint
-            if 'treatment' in stratified_data.columns:
-                treatments = stratified_data['treatment'].dropna().unique()
+            if "treatment" in stratified_data.columns:
+                treatments = stratified_data["treatment"].dropna().unique()
                 if len(treatments) > 0:
-                    assert all(treatment in ['A', 'B', 'C'] for treatment in treatments)
+                    assert all(treatment in ["A", "B", "C"] for treatment in treatments)
 
         # Complex stratification might result in empty dataset
         # This is acceptable behavior
@@ -300,8 +313,8 @@ class TestStratificationPerformance:
         import time
 
         stratification_config = {
-            'categorical_1': ['A', 'B', 'C'],
-            'continuous_1': {'start': 0, 'end': 100}
+            "categorical_1": ["A", "B", "C"],
+            "continuous_1": {"start": 0, "end": 100},
         }
 
         performance_results = {}
@@ -314,15 +327,17 @@ class TestStratificationPerformance:
             start_time = time.perf_counter()
 
             try:
-                stratified_data = apply_data_stratification(test_data, stratification_config)
+                stratified_data = apply_data_stratification(
+                    test_data, stratification_config
+                )
                 end_time = time.perf_counter()
 
                 execution_time = end_time - start_time
                 performance_results[size_name] = {
-                    'execution_time': execution_time,
-                    'input_size': len(test_data),
-                    'output_size': len(stratified_data),
-                    'success': True
+                    "execution_time": execution_time,
+                    "input_size": len(test_data),
+                    "output_size": len(stratified_data),
+                    "success": True,
                 }
 
                 # Should complete in reasonable time
@@ -330,20 +345,20 @@ class TestStratificationPerformance:
 
             except Exception as e:
                 performance_results[size_name] = {
-                    'execution_time': None,
-                    'input_size': len(test_data),
-                    'output_size': 0,
-                    'success': False,
-                    'error': str(e)
+                    "execution_time": None,
+                    "input_size": len(test_data),
+                    "output_size": 0,
+                    "success": False,
+                    "error": str(e),
                 }
 
         # Should have at least some successful results
-        successful_results = [r for r in performance_results.values() if r['success']]
+        successful_results = [r for r in performance_results.values() if r["success"]]
         if len(successful_results) > 1:
             # Performance should not degrade dramatically with size
             # (This is a basic check - real performance testing would be more rigorous)
-            times = [r['execution_time'] for r in successful_results]
-            sizes = [r['input_size'] for r in successful_results]
+            times = [r["execution_time"] for r in successful_results]
+            sizes = [r["input_size"] for r in successful_results]
 
             # Larger datasets should not take exponentially longer
             # Simple check: largest dataset should not take more than 10x longer than smallest
@@ -365,8 +380,8 @@ class TestStratificationPerformance:
         initial_memory = process.memory_info().rss
 
         stratification_config = {
-            'categorical_1': ['A', 'B'],
-            'continuous_1': {'start': 25, 'end': 75}
+            "categorical_1": ["A", "B"],
+            "continuous_1": {"start": 25, "end": 75},
         }
 
         # Test with largest available dataset
@@ -381,7 +396,7 @@ class TestStratificationPerformance:
         if largest_dataset is not None and len(largest_dataset) > 1000:
             # Apply stratification
             try:
-                stratified_data = apply_data_stratification(largest_dataset, stratification_config)
+                apply_data_stratification(largest_dataset, stratification_config)
 
                 # Check memory usage after stratification
                 final_memory = process.memory_info().rss

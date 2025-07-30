@@ -41,7 +41,9 @@ NoiseDistribution = Literal["laplace", "gaussian"]
 PrivacyResult = Union[Dict[str, Any], pd.DataFrame]
 
 
-def mask_unnecessary_variables(df: pd.DataFrame, variables_to_use: List[str]) -> pd.DataFrame:
+def mask_unnecessary_variables(
+    df: pd.DataFrame, variables_to_use: List[str]
+) -> pd.DataFrame:
     """
     Mask unnecessary variables in the DataFrame by removing them from the working draft of the DataFrame.
 
@@ -63,8 +65,9 @@ def mask_unnecessary_variables(df: pd.DataFrame, variables_to_use: List[str]) ->
     return df
 
 
-def apply_sample_size_threshold(client: AlgorithmClient, df: pd.DataFrame,
-                                variables_to_check: List[str]) -> DataFrameOrDict:
+def apply_sample_size_threshold(
+    client: AlgorithmClient, df: pd.DataFrame, variables_to_check: List[str]
+) -> DataFrameOrDict:
     """
     This function thresholds the sample size of the input DataFrame.
 
@@ -83,20 +86,28 @@ def apply_sample_size_threshold(client: AlgorithmClient, df: pd.DataFrame,
     except TypeError:
         sample_size_threshold = 10
 
-    safe_log("info", f"Applying sample size threshold of '{str(sample_size_threshold)}' to working draft of DataFrame")
+    safe_log(
+        "info",
+        f"Applying sample size threshold of '{str(sample_size_threshold)}' to working draft of DataFrame",
+    )
 
     # Check if the DataFrame is empty
     if len(df) <= sample_size_threshold:
         raise PrivacyThresholdViolation(
-            f"Sub-task was not executed because the number of samples in organisation with id '{client.organization_id}' "
-            f"is too small (n <= {sample_size_threshold}).")
+            f"Sub-task was not executed because the number of samples in organisation with id "
+            f"'{client.organization_id}' "
+            f"is too small (n <= {sample_size_threshold})."
+        )
 
     # Check if there are enough datapoints
     for variable in variables_to_check:
         if variable in df.columns:
             if df[variable].notnull().sum() <= sample_size_threshold:
-                safe_log("warn",
-                         f"Variable {variable} was set to completely missing because the number of samples is too small")
+                safe_log(
+                    "warn",
+                    f"Variable {variable} was set to completely missing because the"
+                    f" number of samples is too small",
+                )
                 df[variable] = pd.NA
                 continue
 
@@ -124,7 +135,9 @@ class PrivacyBudgetManager:
         self.used_epsilon = 0.0
         self.query_history: List[Dict[str, Any]] = []
 
-    def check_and_consume(self, requested_epsilon: float, operation_id: Optional[str] = None) -> bool:
+    def check_and_consume(
+        self, requested_epsilon: float, operation_id: Optional[str] = None
+    ) -> bool:
         """
         Check if sufficient budget is available and consume it if so.
 
@@ -136,21 +149,28 @@ class PrivacyBudgetManager:
             bool: True if budget was successfully consumed, False if budget would be exceeded.
         """
         if self.used_epsilon + requested_epsilon > self.total_epsilon:
-            safe_log("warn", f"Privacy budget exceeded. Used: {self.used_epsilon}, Requested: {requested_epsilon}. "
-                             f"Skipping this operation")
+            safe_log(
+                "warn",
+                f"Privacy budget exceeded. Used: {self.used_epsilon}, Requested: {requested_epsilon}. "
+                f"Skipping this operation",
+            )
             return False
 
         self.used_epsilon += requested_epsilon
 
         # Record the operation for auditing purposes
-        self.query_history.append({
-            'operation_id': operation_id or f"query_{len(self.query_history)}",
-            'epsilon': requested_epsilon,
-            'timestamp': pd.Timestamp.now()
-        })
+        self.query_history.append(
+            {
+                "operation_id": operation_id or f"query_{len(self.query_history)}",
+                "epsilon": requested_epsilon,
+                "timestamp": pd.Timestamp.now(),
+            }
+        )
 
-        safe_log("info",
-                 f"Privacy budget consumed: {requested_epsilon}. Remaining: {self.total_epsilon - self.used_epsilon}")
+        safe_log(
+            "info",
+            f"Privacy budget consumed: {requested_epsilon}. Remaining: {self.total_epsilon - self.used_epsilon}",
+        )
         return True
 
     def get_remaining_budget(self) -> float:
@@ -186,7 +206,9 @@ def _get_laplace_scale(sensitivity: float, epsilon: float) -> float:
     return sensitivity / epsilon
 
 
-def _get_gaussian_noise_scale(sensitivity: float, delta: float, epsilon: float) -> float:
+def _get_gaussian_noise_scale(
+    sensitivity: float, delta: float, epsilon: float
+) -> float:
     """
     Calculate the scale parameter for the Gaussian noise mechanism.
 
@@ -202,13 +224,13 @@ def _get_gaussian_noise_scale(sensitivity: float, delta: float, epsilon: float) 
 
 
 def _generate_query_seed(
-        df_shape: Tuple[int, int],
-        variable: str,
-        epsilon: float,
-        delta: float,
-        distribution: str,
-        operation: str = None,
-        **kwargs
+    df_shape: Tuple[int, int],
+    variable: str,
+    epsilon: float,
+    delta: float,
+    distribution: str,
+    operation: Optional[str] = None,
+    **kwargs,
 ) -> int:
     """
     Generate a deterministic seed for noise generation based on query parameters.
@@ -235,7 +257,7 @@ def _generate_query_seed(
         "variable": variable,
         "epsilon": epsilon,
         "delta": delta,
-        "distribution": distribution
+        "distribution": distribution,
     }
 
     # Add operation if provided (for numerical data)
@@ -252,15 +274,15 @@ def _generate_query_seed(
     hash_value = hashlib.sha256(query_json.encode()).hexdigest()
 
     # Convert hash to integer for seed (modulo to prevent overflow)
-    return int(hash_value, 16) % (2 ** 32 - 1)
+    return int(hash_value, 16) % (2**32 - 1)
 
 
 def _generate_noise(
-        sensitivity: float,
-        epsilon: float,
-        delta: float = 1e-5,
-        distribution: NoiseDistribution = "laplace",
-        seed: Optional[int] = None
+    sensitivity: float,
+    epsilon: float,
+    delta: float = 1e-5,
+    distribution: NoiseDistribution = "laplace",
+    seed: Optional[int] = None,
 ) -> float:
     """
     Generate noise based on the chosen differential privacy mechanism.
@@ -287,7 +309,7 @@ def _generate_noise(
         rng = np.random.RandomState(seed)
     else:
         # Use the global RNG if no seed (less secure but maintains backwards compatibility)
-        rng = np.random
+        rng = np.random.RandomState()
 
     if distribution == "laplace":
         scale = _get_laplace_scale(sensitivity, epsilon)
@@ -337,9 +359,9 @@ def _sanitise_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
     return safe_metadata
 
 
-def _calculate_sensitivity(df: pd.DataFrame,
-                           column_name: str,
-                           operation: str = 'mean') -> float:
+def _calculate_sensitivity(
+    df: pd.DataFrame, column_name: str, operation: str = "mean"
+) -> float:
     """
     Calculate the sensitivity of a specific operation on the data.
 
@@ -374,13 +396,13 @@ def _calculate_sensitivity(df: pd.DataFrame,
         value_range = max_val - min_val
 
         # Different operations have different sensitivities
-        if operation == 'mean':
+        if operation == "mean":
             # For mean, sensitivity is range/n
             return value_range / n
-        elif operation == 'sum':
+        elif operation == "sum":
             # For sum, sensitivity is just the maximum value
             return max_val
-        elif operation == 'count':
+        elif operation == "count":
             # For count, sensitivity is 1
             return 1.0
         else:
@@ -391,12 +413,14 @@ def _calculate_sensitivity(df: pd.DataFrame,
         return 1.0
 
 
-def _apply_dp_to_categorical(df: pd.DataFrame,
-                             column_name: str,
-                             epsilon: float,
-                             delta: float = 1e-5,
-                             debug_mode: bool = False,
-                             distribution: NoiseDistribution = "laplace") -> Dict[str, Any]:
+def _apply_dp_to_categorical(
+    df: pd.DataFrame,
+    column_name: str,
+    epsilon: float,
+    delta: float = 1e-5,
+    debug_mode: bool = False,
+    distribution: NoiseDistribution = "laplace",
+) -> Dict[str, Any]:
     """
     Apply differential privacy to categorical data by adding noise to category counts.
 
@@ -415,7 +439,7 @@ def _apply_dp_to_categorical(df: pd.DataFrame,
         Dict[str, Any]: Results including private category counts.
     """
     # Get all possible categories (including those not in the data)
-    if hasattr(df[column_name].dtype, 'categories'):
+    if hasattr(df[column_name].dtype, "categories"):
         all_categories = list(df[column_name].dtype.categories)
     else:
         # If categories aren't defined in the dtype, use unique values
@@ -444,7 +468,7 @@ def _apply_dp_to_categorical(df: pd.DataFrame,
         variable=column_name,
         epsilon=epsilon,
         delta=delta,
-        distribution=distribution
+        distribution=distribution,
     )
 
     # Add noise to each category count
@@ -452,7 +476,9 @@ def _apply_dp_to_categorical(df: pd.DataFrame,
     for i, (category, count) in enumerate(value_counts.items()):
         # Create a unique seed for each category by combining the base seed with category index
         category_seed = base_seed + i
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=category_seed)
+        noise = _generate_noise(
+            sensitivity, epsilon, delta, distribution, seed=category_seed
+        )
         # Round to the nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[category] = private_count
@@ -466,8 +492,8 @@ def _apply_dp_to_categorical(df: pd.DataFrame,
             "sensitivity": sensitivity,
             "noise_scale": noise_scale,
             "distribution": distribution,
-            "categories": all_categories
-        }
+            "categories": all_categories,
+        },
     }
 
     # Include true values only in debug mode
@@ -477,12 +503,14 @@ def _apply_dp_to_categorical(df: pd.DataFrame,
     return result
 
 
-def _apply_dp_to_boolean(df: pd.DataFrame,
-                         column_name: str,
-                         epsilon: float,
-                         delta: float = 1e-5,
-                         debug_mode: bool = False,
-                         distribution: NoiseDistribution = "laplace") -> Dict[str, Any]:
+def _apply_dp_to_boolean(
+    df: pd.DataFrame,
+    column_name: str,
+    epsilon: float,
+    delta: float = 1e-5,
+    debug_mode: bool = False,
+    distribution: NoiseDistribution = "laplace",
+) -> Dict[str, Any]:
     """
     Apply differential privacy to boolean data by treating it as a special case of categorical.
 
@@ -526,7 +554,7 @@ def _apply_dp_to_boolean(df: pd.DataFrame,
         variable=column_name,
         epsilon=epsilon,
         delta=delta,
-        distribution=distribution
+        distribution=distribution,
     )
 
     # Add noise to each category count
@@ -534,7 +562,9 @@ def _apply_dp_to_boolean(df: pd.DataFrame,
     for i, (category, count) in enumerate(value_counts.items()):
         # Create a unique seed for each category
         category_seed = base_seed + i
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=category_seed)
+        noise = _generate_noise(
+            sensitivity, epsilon, delta, distribution, seed=category_seed
+        )
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[category] = private_count
@@ -547,8 +577,8 @@ def _apply_dp_to_boolean(df: pd.DataFrame,
         "metadata": {
             "sensitivity": sensitivity,
             "noise_scale": noise_scale,
-            "distribution": distribution
-        }
+            "distribution": distribution,
+        },
     }
 
     # Include true values only in debug mode
@@ -558,13 +588,15 @@ def _apply_dp_to_boolean(df: pd.DataFrame,
     return result
 
 
-def _apply_dp_to_string(df: pd.DataFrame,
-                        column_name: str,
-                        epsilon: float,
-                        delta: float = 1e-5,
-                        top_k: int = 10,
-                        debug_mode: bool = False,
-                        distribution: NoiseDistribution = "laplace") -> Dict[str, Any]:
+def _apply_dp_to_string(
+    df: pd.DataFrame,
+    column_name: str,
+    epsilon: float,
+    delta: float = 1e-5,
+    top_k: int = 10,
+    debug_mode: bool = False,
+    distribution: NoiseDistribution = "laplace",
+) -> Dict[str, Any]:
     """
     Apply differential privacy to string data by reporting noisy counts of top values.
 
@@ -606,7 +638,7 @@ def _apply_dp_to_string(df: pd.DataFrame,
         epsilon=epsilon,
         delta=delta,
         distribution=distribution,
-        top_k=top_k
+        top_k=top_k,
     )
 
     # Add noise to each category count
@@ -614,7 +646,9 @@ def _apply_dp_to_string(df: pd.DataFrame,
     for i, (category, count) in enumerate(top_values_dict.items()):
         # Create a unique seed for each category
         category_seed = base_seed + i
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=category_seed)
+        noise = _generate_noise(
+            sensitivity, epsilon, delta, distribution, seed=category_seed
+        )
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[category] = private_count
@@ -628,8 +662,8 @@ def _apply_dp_to_string(df: pd.DataFrame,
             "sensitivity": sensitivity,
             "noise_scale": noise_scale,
             "distribution": distribution,
-            "top_k": top_k
-        }
+            "top_k": top_k,
+        },
     }
 
     # Include true values only in debug mode
@@ -639,14 +673,16 @@ def _apply_dp_to_string(df: pd.DataFrame,
     return result
 
 
-def _apply_dp_to_datetime(df: pd.DataFrame,
-                          column_name: str,
-                          epsilon: float,
-                          delta: float = 1e-5,
-                          bins: Optional[BinType] = None,
-                          bin_count: int = 10,
-                          debug_mode: bool = False,
-                          distribution: NoiseDistribution = "laplace") -> Dict[str, Any]:
+def _apply_dp_to_datetime(
+    df: pd.DataFrame,
+    column_name: str,
+    epsilon: float,
+    delta: float = 1e-5,
+    bins: Optional[BinType] = None,
+    bin_count: int = 10,
+    debug_mode: bool = False,
+    distribution: NoiseDistribution = "laplace",
+) -> Dict[str, Any]:
     """
     Apply differential privacy to datetime data by binning and adding noise to bin counts.
 
@@ -675,7 +711,7 @@ def _apply_dp_to_datetime(df: pd.DataFrame,
             "private_counts": {},
             "epsilon_used": epsilon,
             "sample_count": 0,
-            "error": "No valid datetime data found"
+            "error": "No valid datetime data found",
         }
 
     # Create bins if not provided
@@ -714,7 +750,7 @@ def _apply_dp_to_datetime(df: pd.DataFrame,
         epsilon=epsilon,
         delta=delta,
         distribution=distribution,
-        bin_count=bin_count
+        bin_count=bin_count,
     )
 
     # Add noise to each bin count
@@ -722,7 +758,9 @@ def _apply_dp_to_datetime(df: pd.DataFrame,
     for i, (bin_label, count) in enumerate(count_dict.items()):
         # Create a unique seed for each bin
         bin_seed = base_seed + i
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=bin_seed)
+        noise = _generate_noise(
+            sensitivity, epsilon, delta, distribution, seed=bin_seed
+        )
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[bin_label] = private_count
@@ -737,8 +775,12 @@ def _apply_dp_to_datetime(df: pd.DataFrame,
             "noise_scale": noise_scale,
             "distribution": distribution,
             "bin_count": len(bins) - 1,
-            "bin_edges": bin_edges if debug_mode else [f"bin_edge_{i}" for i in range(len(bin_edges))]
-        }
+            "bin_edges": (
+                bin_edges
+                if debug_mode
+                else [f"bin_edge_{i}" for i in range(len(bin_edges))]
+            ),
+        },
     }
 
     # Include true values only in debug mode
@@ -748,14 +790,16 @@ def _apply_dp_to_datetime(df: pd.DataFrame,
     return result
 
 
-def _apply_dp_to_timedelta(df: pd.DataFrame,
-                           column_name: str,
-                           epsilon: float,
-                           delta: float = 1e-5,
-                           bins: Optional[BinType] = None,
-                           bin_count: int = 10,
-                           debug_mode: bool = False,
-                           distribution: NoiseDistribution = "laplace") -> Dict[str, Any]:
+def _apply_dp_to_timedelta(
+    df: pd.DataFrame,
+    column_name: str,
+    epsilon: float,
+    delta: float = 1e-5,
+    bins: Optional[BinType] = None,
+    bin_count: int = 10,
+    debug_mode: bool = False,
+    distribution: NoiseDistribution = "laplace",
+) -> Dict[str, Any]:
     """
     Apply differential privacy to timedelta data by binning and adding noise to bin counts.
 
@@ -784,7 +828,7 @@ def _apply_dp_to_timedelta(df: pd.DataFrame,
             "private_counts": {},
             "epsilon_used": epsilon,
             "sample_count": 0,
-            "error": "No valid timedelta data found"
+            "error": "No valid timedelta data found",
         }
 
     # Convert to total seconds for binning
@@ -806,7 +850,9 @@ def _apply_dp_to_timedelta(df: pd.DataFrame,
         bins = [timedelta(seconds=s) for s in second_bins]
     else:
         # Convert provided bins to seconds for histogram
-        second_bins = [b.total_seconds() if isinstance(b, timedelta) else b for b in bins]
+        second_bins = [
+            b.total_seconds() if isinstance(b, timedelta) else b for b in bins
+        ]
 
     # Create histogram with specified bins
     hist, _ = np.histogram(seconds_data, bins=second_bins)
@@ -833,7 +879,7 @@ def _apply_dp_to_timedelta(df: pd.DataFrame,
         epsilon=epsilon,
         delta=delta,
         distribution=distribution,
-        bin_count=bin_count
+        bin_count=bin_count,
     )
 
     # Add noise to each bin count
@@ -841,7 +887,9 @@ def _apply_dp_to_timedelta(df: pd.DataFrame,
     for i, (bin_label, count) in enumerate(count_dict.items()):
         # Create a unique seed for each bin
         bin_seed = base_seed + i
-        noise = _generate_noise(sensitivity, epsilon, delta, distribution, seed=bin_seed)
+        noise = _generate_noise(
+            sensitivity, epsilon, delta, distribution, seed=bin_seed
+        )
         # Round to nearest non-negative integer
         private_count = max(0, round(count + noise))
         private_counts[bin_label] = private_count
@@ -856,8 +904,10 @@ def _apply_dp_to_timedelta(df: pd.DataFrame,
             "noise_scale": noise_scale,
             "distribution": distribution,
             "bin_count": len(bins) - 1,
-            "bin_edges": bins if debug_mode else [f"bin_edge_{i}" for i in range(len(bins))]
-        }
+            "bin_edges": (
+                bins if debug_mode else [f"bin_edge_{i}" for i in range(len(bins))]
+            ),
+        },
     }
 
     # Include true values only in debug mode
@@ -885,30 +935,35 @@ def _get_dp_dataframe(df: pd.DataFrame, dp_results: Dict[str, Any]) -> pd.DataFr
     dp_df = df.copy()
 
     # Store metadata about the DP process (with sanitised information)
-    dp_df.attrs['dp_metadata'] = {
-        'privacy_budget': dp_results.get('privacy_budget', {}),
-        'variables_protected': []
+    dp_df.attrs["dp_metadata"] = {
+        "privacy_budget": dp_results.get("privacy_budget", {}),
+        "variables_protected": [],
     }
 
     # Process each variable's DP results
     for var_name, result in dp_results.items():
         # Skip the non-variable entries
-        if var_name in ["privacy_budget", "processing_summary", "security_notice", "security_warning"]:
+        if var_name in [
+            "privacy_budget",
+            "processing_summary",
+            "security_notice",
+            "security_warning",
+        ]:
             continue
 
         # Add to the list of protected variables
-        dp_df.attrs['dp_metadata']['variables_protected'].append(var_name)
+        dp_df.attrs["dp_metadata"]["variables_protected"].append(var_name)
 
         # Check the operation type to determine how to process
         operation = result.get("operation", "")
 
-        if operation in ['mean', 'sum', 'count']:
+        if operation in ["mean", "sum", "count"]:
             # For numerical operations with a single result, fill the column with the DP value
-            dp_df[var_name] = result['private_result']
+            dp_df[var_name] = result["private_result"]
 
-        elif operation in ['category_counts', 'boolean_counts', 'string_top_counts']:
+        elif operation in ["category_counts", "boolean_counts", "string_top_counts"]:
             # For categorical data, generate synthetic data based on the private counts
-            counts = result['private_counts']
+            counts = result["private_counts"]
             if sum(counts.values()) > 0:  # Ensure we have some non-zero counts
                 # Convert counts to probabilities
                 total = sum(counts.values())
@@ -920,19 +975,23 @@ def _get_dp_dataframe(df: pd.DataFrame, dp_results: Dict[str, Any]) -> pd.DataFr
 
                 # Sample with replacement to create new data
                 n_samples = len(df)
-                synthetic_data = np.random.choice(categories, size=n_samples, p=probabilities)
+                synthetic_data = np.random.choice(
+                    categories, size=n_samples, p=probabilities
+                )
 
                 # If it's a pandas categorical type, maintain that
                 if pd.api.types.is_categorical_dtype(df[var_name]):
-                    dp_df[var_name] = pd.Categorical(synthetic_data, categories=df[var_name].dtype.categories)
+                    dp_df[var_name] = pd.Categorical(
+                        synthetic_data, categories=df[var_name].dtype.categories
+                    )
                 else:
                     dp_df[var_name] = synthetic_data
 
-        elif operation in ['datetime_histogram', 'timedelta_histogram']:
+        elif operation in ["datetime_histogram", "timedelta_histogram"]:
             # For binned data, sample from the bins based on private counts
-            if 'private_counts' in result and result['private_counts']:
-                bin_edges = result['metadata'].get('bin_edges', [])
-                counts = result['private_counts']
+            if "private_counts" in result and result["private_counts"]:
+                bin_edges = result["metadata"].get("bin_edges", [])
+                counts = result["private_counts"]
 
                 if bin_edges and sum(counts.values()) > 0:
                     # Convert bin labels back to actual edges
@@ -945,7 +1004,9 @@ def _get_dp_dataframe(df: pd.DataFrame, dp_results: Dict[str, Any]) -> pd.DataFr
                             # Calculate the center of the bin
                             if pd.api.types.is_datetime64_dtype(df[var_name]):
                                 # For datetime, the bin center is the midpoint
-                                bin_center = bin_edges[i] + (bin_edges[i + 1] - bin_edges[i]) / 2
+                                bin_center = (
+                                    bin_edges[i] + (bin_edges[i + 1] - bin_edges[i]) / 2
+                                )
                             else:
                                 # For timedelta, convert to seconds, find midpoint, convert back
                                 start_seconds = bin_edges[i].total_seconds()
@@ -962,36 +1023,43 @@ def _get_dp_dataframe(df: pd.DataFrame, dp_results: Dict[str, Any]) -> pd.DataFr
 
                     # Sample from bin centers with replacement
                     n_samples = len(df)
-                    synthetic_data = np.random.choice(bin_centers, size=n_samples, p=bin_probs)
+                    synthetic_data = np.random.choice(
+                        bin_centers, size=n_samples, p=bin_probs
+                    )
 
                     # Assign to DataFrame
                     dp_df[var_name] = synthetic_data
 
     # Store the original column order
-    dp_df.attrs['dp_metadata']['original_columns'] = list(df.columns)
+    dp_df.attrs["dp_metadata"]["original_columns"] = list(df.columns)
 
     # Store processing summary if available
     if "processing_summary" in dp_results:
-        dp_df.attrs['dp_metadata']['processing_summary'] = dp_results["processing_summary"]
+        dp_df.attrs["dp_metadata"]["processing_summary"] = dp_results[
+            "processing_summary"
+        ]
 
     # Store security notice
-    dp_df.attrs['dp_metadata']['security_notice'] = dp_results.get("security_notice",
-                                                                   "This DataFrame contains privacy-protected data.")
+    dp_df.attrs["dp_metadata"]["security_notice"] = dp_results.get(
+        "security_notice", "This DataFrame contains privacy-protected data."
+    )
 
     return dp_df
 
 
-def apply_differential_privacy(df: pd.DataFrame,
-                               variables: Union[str, List[str]],
-                               epsilon: float = 0.1,
-                               delta: float = 1e-5,
-                               distribution: NoiseDistribution = "laplace",
-                               operation: DifferentialPrivacyOperation = 'mean',
-                               budget_manager: Optional[PrivacyBudgetManager] = None,
-                               return_type: DifferentialPrivacyReturn = 'verbose',
-                               randomize_order: bool = True,
-                               debug_mode: bool = False,
-                               **kwargs) -> PrivacyResult:
+def apply_differential_privacy(
+    df: pd.DataFrame,
+    variables: Union[str, List[str]],
+    epsilon: float = 0.1,
+    delta: float = 1e-5,
+    distribution: NoiseDistribution = "laplace",
+    operation: DifferentialPrivacyOperation = "mean",
+    budget_manager: Optional[PrivacyBudgetManager] = None,
+    return_type: DifferentialPrivacyReturn = "verbose",
+    randomize_order: bool = True,
+    debug_mode: bool = False,
+    **kwargs,
+) -> PrivacyResult:
     """
     Apply differential privacy to one or more variables in a DataFrame.
 
@@ -1074,8 +1142,10 @@ def apply_differential_privacy(df: pd.DataFrame,
     """
     # Log warning if debug mode is enabled
     if debug_mode:
-        safe_log("warn",
-                 "DEBUG MODE ACTIVE: This operation includes true values and should be used only in secure environments")
+        safe_log(
+            "warn",
+            "DEBUG MODE ACTIVE: This operation includes true values and should be used only in secure environments",
+        )
 
     # Log which mechanism is being used
     safe_log("info", f"Using {distribution} mechanism for differential privacy")
@@ -1086,7 +1156,9 @@ def apply_differential_privacy(df: pd.DataFrame,
     else:
         variables_list = variables
 
-    safe_log("info", f"Applying differential privacy to {len(variables_list)} variables")
+    safe_log(
+        "info", f"Applying differential privacy to {len(variables_list)} variables"
+    )
 
     # Create a budget manager if none was provided
     if budget_manager is None:
@@ -1096,15 +1168,15 @@ def apply_differential_privacy(df: pd.DataFrame,
     epsilon_per_variable = epsilon / len(variables_list)
 
     # Extract additional parameters
-    top_k = kwargs.get('top_k', 10)
-    bin_count = kwargs.get('bin_count', 10)
-    bins = kwargs.get('bins', None)
+    top_k = kwargs.get("top_k", 10)
+    bin_count = kwargs.get("bin_count", 10)
+    bins = kwargs.get("bins", None)
 
     # Create a copy of the variables list and potentially randomise order
     variables_to_process = list(variables_list)
     if randomize_order:
         random.shuffle(variables_to_process)
-        safe_log("info", f"Processing variables in randomised order")
+        safe_log("info", "Processing variables in randomised order")
 
     results: Dict[str, Any] = {}
     processed_variables: List[str] = []
@@ -1119,8 +1191,7 @@ def apply_differential_privacy(df: pd.DataFrame,
 
         # Check if we have enough budget remaining
         if not budget_manager.check_and_consume(
-                epsilon_per_variable,
-                operation_id=f"dp_{variable}"
+            epsilon_per_variable, operation_id=f"dp_{variable}"
         ):
             # If not enough budget, add to skipped variables and continue
             skipped_variables.append(variable)
@@ -1132,9 +1203,13 @@ def apply_differential_privacy(df: pd.DataFrame,
 
         # Safely determine data type and apply appropriate DP mechanism
         try:
-            if isinstance(df[variable].dtype, pd.CategoricalDtype) or hasattr(df[variable].dtype, 'categories'):
+            if isinstance(df[variable].dtype, pd.CategoricalDtype) or hasattr(
+                df[variable].dtype, "categories"
+            ):
                 # Categorical data
-                safe_log("info", f"Applying categorical differential privacy to {variable}")
+                safe_log(
+                    "info", f"Applying categorical differential privacy to {variable}"
+                )
                 results[variable] = _apply_dp_to_categorical(
                     df, variable, epsilon_per_variable, delta, debug_mode, distribution
                 )
@@ -1150,34 +1225,67 @@ def apply_differential_privacy(df: pd.DataFrame,
                 # String data
                 safe_log("info", f"Applying string differential privacy to {variable}")
                 results[variable] = _apply_dp_to_string(
-                    df, variable, epsilon_per_variable, delta, top_k, debug_mode, distribution
+                    df,
+                    variable,
+                    epsilon_per_variable,
+                    delta,
+                    top_k,
+                    debug_mode,
+                    distribution,
                 )
 
             elif pd.api.types.is_datetime64_dtype(df[variable]):
                 # Datetime data
-                safe_log("info", f"Applying datetime differential privacy to {variable}")
+                safe_log(
+                    "info", f"Applying datetime differential privacy to {variable}"
+                )
                 results[variable] = _apply_dp_to_datetime(
-                    df, variable, epsilon_per_variable, delta, bins, bin_count, debug_mode, distribution
+                    df,
+                    variable,
+                    epsilon_per_variable,
+                    delta,
+                    bins,
+                    bin_count,
+                    debug_mode,
+                    distribution,
                 )
 
             elif pd.api.types.is_timedelta64_dtype(df[variable]):
                 # Timedelta data
-                safe_log("info", f"Applying timedelta differential privacy to {variable}")
+                safe_log(
+                    "info", f"Applying timedelta differential privacy to {variable}"
+                )
                 results[variable] = _apply_dp_to_timedelta(
-                    df, variable, epsilon_per_variable, delta, bins, bin_count, debug_mode, distribution
+                    df,
+                    variable,
+                    epsilon_per_variable,
+                    delta,
+                    bins,
+                    bin_count,
+                    debug_mode,
+                    distribution,
                 )
 
             elif pd.api.types.is_numeric_dtype(df[variable]):
                 # Numerical data (int or float)
-                safe_log("info", f"Applying numerical differential privacy to {variable} with operation '{operation}'")
+                safe_log(
+                    "info",
+                    f"Applying numerical differential privacy to {variable} with operation '{operation}'",
+                )
 
                 # Calculate the true result using safe calculation
-                if operation == 'mean':
-                    true_result = safe_calculate(lambda: df[variable].mean(), default_value=0.0)
-                elif operation == 'sum':
-                    true_result = safe_calculate(lambda: df[variable].sum(), default_value=0.0)
-                elif operation == 'count':
-                    true_result = safe_calculate(lambda: df[variable].count(), default_value=0)
+                if operation == "mean":
+                    true_result = safe_calculate(
+                        lambda: df[variable].mean(), default_value=0.0
+                    )
+                elif operation == "sum":
+                    true_result = safe_calculate(
+                        lambda: df[variable].sum(), default_value=0.0
+                    )
+                elif operation == "count":
+                    true_result = safe_calculate(
+                        lambda: df[variable].count(), default_value=0
+                    )
                 else:
                     raise InputError(f"Unsupported operation: {operation}")
 
@@ -1187,7 +1295,7 @@ def apply_differential_privacy(df: pd.DataFrame,
                     default_value=1.0,  # Conservative default
                     df=df,
                     column_name=variable,
-                    operation=operation
+                    operation=operation,
                 )
 
                 # Generate deterministic seed for this query
@@ -1197,7 +1305,7 @@ def apply_differential_privacy(df: pd.DataFrame,
                     epsilon=epsilon_per_variable,
                     delta=delta,
                     distribution=distribution,
-                    operation=operation
+                    operation=operation,
                 )
 
                 # Generate noise using the selected distribution with deterministic seed
@@ -1206,7 +1314,7 @@ def apply_differential_privacy(df: pd.DataFrame,
                     epsilon_per_variable,
                     delta,
                     distribution,
-                    seed=query_seed
+                    seed=query_seed,
                 )
                 private_result = true_result + noise
 
@@ -1214,7 +1322,9 @@ def apply_differential_privacy(df: pd.DataFrame,
                 if distribution == "laplace":
                     noise_scale = _get_laplace_scale(sensitivity, epsilon_per_variable)
                 else:
-                    noise_scale = _get_gaussian_noise_scale(sensitivity, delta, epsilon_per_variable)
+                    noise_scale = _get_gaussian_noise_scale(
+                        sensitivity, delta, epsilon_per_variable
+                    )
 
                 result_dict: Dict[str, Any] = {
                     "operation": operation,
@@ -1224,8 +1334,8 @@ def apply_differential_privacy(df: pd.DataFrame,
                     "metadata": {
                         "sensitivity": sensitivity,
                         "noise_scale": noise_scale,
-                        "distribution": distribution
-                    }
+                        "distribution": distribution,
+                    },
                 }
 
                 # Include true values only in debug mode
@@ -1235,11 +1345,17 @@ def apply_differential_privacy(df: pd.DataFrame,
                 results[variable] = result_dict
             else:
                 # Unknown or unsupported data type
-                safe_log("warn", f"Unsupported data type {df[variable].dtype} for variable {variable}, skipping")
+                safe_log(
+                    "warn",
+                    f"Unsupported data type {df[variable].dtype} for variable {variable}, skipping",
+                )
                 skipped_variables.append(variable)
         except Exception as e:
             # Handle any unexpected errors safely
-            safe_log("warn", f"Error processing variable {variable}: {type(e).__name__}. Skipping")
+            safe_log(
+                "warn",
+                f"Error processing variable {variable}: {type(e).__name__}. Skipping",
+            )
             skipped_variables.append(variable)
 
     # Check which variables from the original list were not processed
@@ -1251,7 +1367,7 @@ def apply_differential_privacy(df: pd.DataFrame,
     results["privacy_budget"] = {
         "total": epsilon,
         "used": budget_manager.used_epsilon,
-        "remaining": budget_manager.get_remaining_budget()
+        "remaining": budget_manager.get_remaining_budget(),
     }
 
     # Add variables processing information
@@ -1262,34 +1378,50 @@ def apply_differential_privacy(df: pd.DataFrame,
         "total_processed": len(processed_variables),
         "total_skipped": len(skipped_variables),
         "randomised_order": randomize_order,
-        "distribution": distribution
+        "distribution": distribution,
     }
 
     # If no variables were processed, warn the user
     if len(processed_variables) == 0:
-        safe_log("warn", "No variables were processed. Either privacy budget was too small or no variables were found")
+        safe_log(
+            "warn",
+            "No variables were processed. Either privacy budget was too small or no variables were found",
+        )
 
     # If some variables were skipped due to budget, warn the user
     if any(v in variables_list for v in skipped_variables):
         count = len(skipped_variables)
-        safe_log("warn",
-                 f"Some {'variable was' if count == 1 else 'variables were'} skipped due to privacy budget constraints: "
-                 f"{count} {'variable' if count == 1 else 'variables'}")
+        safe_log(
+            "warn",
+            f"Some {'variable was' if count == 1 else 'variables were'} skipped due to privacy budget constraints: "
+            f"{count} {'variable' if count == 1 else 'variables'}",
+        )
 
     # Add security notice
-    results["security_notice"] = "This output contains privacy-protected information only."
+    results["security_notice"] = (
+        "This output contains privacy-protected information only."
+    )
     if debug_mode:
-        results["security_warning"] = "DEBUG MODE ACTIVE: This output contains true values and should not be shared."
+        results["security_warning"] = (
+            "DEBUG MODE ACTIVE: This output contains true values and should not be shared."
+        )
 
     # Sanitise metadata if not in debug mode
     if not debug_mode:
         for var_name, result in results.items():
-            if var_name not in ["privacy_budget", "processing_summary", "security_notice", "security_warning"]:
+            if var_name not in [
+                "privacy_budget",
+                "processing_summary",
+                "security_notice",
+                "security_warning",
+            ]:
                 if "metadata" in result:
-                    results[var_name]["metadata"] = _sanitise_metadata(result["metadata"])
+                    results[var_name]["metadata"] = _sanitise_metadata(
+                        result["metadata"]
+                    )
 
     # Return based on specified return_type
-    if return_type == 'dataframe':
+    if return_type == "dataframe":
         return _get_dp_dataframe(df, results)
     else:
         return results
