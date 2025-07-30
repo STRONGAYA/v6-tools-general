@@ -9,13 +9,31 @@ File organisation:
 - DataFrame accessor for storing and retrieving predetermined information and/or statistics (PredeterminedInfoAccessor)
 ------------------------------------------------------------------------------
 """
+
 import json
 
 import pandas as pd
 
-from typing import Any, Callable, cast, Dict, List, Optional, Union, Tuple, TypedDict, TypeVar
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Union,
+    Tuple,
+    TypedDict,
+    TypeVar,
+)
 
-from vantage6.algorithm.tools.exceptions import AlgorithmError, CollectOrganizationError, DataError, InputError
+from vantage6.algorithm.tools.exceptions import (
+    AlgorithmError,
+    CollectOrganizationError,
+    DataError,
+    InputError,
+)
 from vantage6.algorithm.tools.util import info, warn, error
 from vantage6.algorithm.client import AlgorithmClient
 
@@ -31,7 +49,7 @@ class StratificationDetails(TypedDict):
 
 
 # Type definition for safe calculation
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 # Type definitions for variable details (data type setting)
@@ -48,8 +66,10 @@ class NonCategoricalDetails(TypedDict):
 VariableDetails = Union[CategoricalDetails, NonCategoricalDetails]
 
 
-def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
-    StratificationDetails['variables_to_stratify']]) -> pd.DataFrame:
+def apply_data_stratification(
+    df: pd.DataFrame,
+    variables_to_stratify: Optional[StratificationDetails],
+) -> pd.DataFrame:
     """
     Stratify the DataFrame based on the specified variables.
 
@@ -73,7 +93,11 @@ def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
     Returns:
         pd.DataFrame: The stratified DataFrame.
     """
-    if variables_to_stratify is None:
+    if (
+        variables_to_stratify is None
+        or not isinstance(variables_to_stratify, dict)
+        or len(variables_to_stratify) == 0
+    ):
         return df
 
     safe_log("info", "Stratifying data based on specified variables")
@@ -81,7 +105,10 @@ def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
     # Check if the specified variables exist in the DataFrame
     for variable in variables_to_stratify:
         if variable not in df.columns:
-            safe_log("error", f"Variable '{variable}' not found in DataFrame. Data stratification will not be applied")
+            safe_log(
+                "error",
+                f"Variable '{variable}' not found in DataFrame. Data stratification will not be applied",
+            )
             return df
 
     # Build the query string
@@ -89,10 +116,12 @@ def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
     for variable, values in variables_to_stratify.items():
         if isinstance(values, dict):
             # Handle range dictionary
-            start = values.get('start')
-            end = values.get('end')
+            start = values.get("start")
+            end = values.get("end")
             if start is not None and end is not None:
-                query_conditions.append(f"`{variable}` >= {start} and `{variable}` <= {end}")
+                query_conditions.append(
+                    f"`{variable}` >= {start} and `{variable}` <= {end}"
+                )
             elif start is not None:
                 query_conditions.append(f"`{variable}` >= {start}")
             elif end is not None:
@@ -109,7 +138,9 @@ def apply_data_stratification(df: pd.DataFrame, variables_to_stratify: Optional[
     return stratified_df.reset_index(drop=True)
 
 
-def collect_organisation_ids(organisation_ids: Optional[List[int]], client: AlgorithmClient) -> List[int]:
+def collect_organisation_ids(
+    organisation_ids: Optional[List[int]], client: AlgorithmClient
+) -> List[int]:
     """
     Collect organisation IDs, ensuring they are a list of integers.
     If the input is not a list of integers, attempt to convert it.
@@ -123,7 +154,9 @@ def collect_organisation_ids(organisation_ids: Optional[List[int]], client: Algo
         List[int]: A list of valid organisation IDs.
     """
     if organisation_ids is None:
-        safe_log("info", "No organisation IDs provided. Collecting all organisation IDs")
+        safe_log(
+            "info", "No organisation IDs provided. Collecting all organisation IDs"
+        )
         organisations = client.organization.list()
         return [organisation.get("id") for organisation in organisations]
 
@@ -146,7 +179,11 @@ def collect_organisation_ids(organisation_ids: Optional[List[int]], client: Algo
         return []
 
 
-def safe_log(level: str, message: str, variables: Optional[List[str]] = None) -> None:
+def safe_log(
+    level: Literal["info", "warn", "error"],
+    message: str,
+    variables: Optional[List[str]] = None,
+) -> None:
     """
     Safely log messages without leaking sensitive data.
 
@@ -166,8 +203,12 @@ def safe_log(level: str, message: str, variables: Optional[List[str]] = None) ->
         message = message.replace("{variables}", var_str)
 
     # Ensure that the message ends with a period if proper punctuation is not yet present
-    if not message.endswith('.') and not message.endswith('?') and not message.endswith('!'):
-        message += '.'
+    if (
+        not message.endswith(".")
+        and not message.endswith("?")
+        and not message.endswith("!")
+    ):
+        message += "."
 
     # Call appropriate log function
     if level == "info":
@@ -178,7 +219,9 @@ def safe_log(level: str, message: str, variables: Optional[List[str]] = None) ->
         error(message)
 
 
-def safe_calculate(calculation_func: Callable[..., T], default_value: T = None, **kwargs: Any) -> T:
+def safe_calculate(
+    calculation_func: Callable[..., T], default_value: Optional[T] = None, **kwargs: Any
+) -> T:
     """
     Safely execute a calculation without leaking data in exceptions.
 
@@ -198,7 +241,9 @@ def safe_calculate(calculation_func: Callable[..., T], default_value: T = None, 
         return cast(T, default_value)
 
 
-def set_datatypes(df: pd.DataFrame, variable_details: Dict[str, VariableDetails]) -> pd.DataFrame:
+def set_datatypes(
+    df: pd.DataFrame, variable_details: Dict[str, VariableDetails]
+) -> pd.DataFrame:
     """
     Set the datatypes for each variable in the DataFrame based on the provided details.
 
@@ -225,31 +270,43 @@ def set_datatypes(df: pd.DataFrame, variable_details: Dict[str, VariableDetails]
         if variable in df.columns:
             datatype = details.get("datatype")
             if datatype == "int" or datatype == "integer":
-                df[variable] = df[variable].astype('Int64')
+                df[variable] = df[variable].astype("Int64")
             elif datatype == "float" or datatype == "numerical":
-                df[variable] = df[variable].astype('Float64')
+                df[variable] = df[variable].astype("Float64")
             elif datatype == "bool" or datatype == "boolean":
-                df[variable] = df[variable].astype('boolean')
+                df[variable] = df[variable].astype("boolean")
             elif datatype == "str" or datatype == "string":
-                df[variable] = df[variable].astype('String')
+                df[variable] = df[variable].astype("String")
             elif datatype == "datetime":
-                df[variable] = pd.to_datetime(df[variable], errors='coerce')
+                df[variable] = pd.to_datetime(df[variable], errors="coerce")
             elif datatype == "timedelta":
-                df[variable] = pd.to_timedelta(df[variable], errors='coerce')
+                df[variable] = pd.to_timedelta(df[variable], errors="coerce")
             elif datatype == "categorical":
                 missing_values = df[variable].isnull().sum()
-                df[variable] = pd.Categorical(df[variable], categories=details.get('inliers', None))
+                df[variable] = pd.Categorical(
+                    df[variable], categories=details.get("inliers", None)
+                )
                 if df[variable].isnull().sum() > missing_values:
-                    safe_log("warn", f"Unexpected values detected in categorical variable '{variable}',"
-                                     f"coercing outliers to missing values")
+                    safe_log(
+                        "warn",
+                        f"Unexpected values detected in categorical variable '{variable}',"
+                        f"coercing outliers to missing values",
+                    )
             else:
-                raise InputError(f"Unknown datatype '{datatype}' for variable '{variable}'")
+                raise InputError(
+                    f"Unknown datatype '{datatype}' for variable '{variable}'"
+                )
     return df
 
 
-def sum_variables(df: pd.DataFrame, variables: List[str], new_variable_name: str,
-                  check_range: Tuple[float, float] = None, required_items: int = None,
-                  strict: bool = True) -> pd.DataFrame:
+def sum_variables(
+    df: pd.DataFrame,
+    variables: List[str],
+    new_variable_name: str,
+    check_range: Optional[Tuple[float, float]] = None,
+    required_items: Optional[int] = None,
+    strict: Optional[bool] = True,
+) -> pd.DataFrame:
     """
     Sum the specified variables in the DataFrame and create a new variable with the result.
 
@@ -274,24 +331,28 @@ def sum_variables(df: pd.DataFrame, variables: List[str], new_variable_name: str
         for var in variables:
             invalid_values = ~df[var].between(min_val, max_val)
             if invalid_values.any():
-                error_msg = (f"Values in {var} outside expected range [{min_val}, {max_val}]. "
-                             f"Found invalid values in rows: {df.index[invalid_values].tolist()}")
+                error_msg = (
+                    f"Values in {var} outside expected range [{min_val}, {max_val}]. "
+                    f"Found invalid values in rows: {df.index[invalid_values].tolist()}"
+                )
                 if strict:
                     raise DataError(error_msg)
                 else:
-                    safe_log("warning", error_msg)
+                    safe_log("warn", error_msg)
 
     # Check for missing values
     missing_count = df[variables].isnull().sum(axis=1)
     if required_items is not None:
         invalid_rows = (len(variables) - missing_count) < required_items
         if invalid_rows.any():
-            error_msg = (f"Insufficient valid responses for {new_variable_name}. "
-                         f"Required: {required_items}, Found invalid rows: {df.index[invalid_rows].tolist()}")
+            error_msg = (
+                f"Insufficient valid responses for {new_variable_name}. "
+                f"Required: {required_items}, Found invalid rows: {df.index[invalid_rows].tolist()}"
+            )
             if strict:
                 raise DataError(error_msg)
             else:
-                safe_log("warning", error_msg)
+                safe_log("warn", error_msg)
 
     # Calculate sum
     safe_log("info", f"Summing variables {variables} into '{new_variable_name}'")
@@ -332,18 +393,20 @@ class PredeterminedInfoAccessor:
         Ensures the DataFrame has the necessary attribute storage structure.
         """
         if not self._initialized:
-            if 'stats' not in self._obj.attrs:
-                self._obj.attrs['stats'] = {}
+            if "stats" not in self._obj.attrs:
+                self._obj.attrs["stats"] = {}
             self._initialized = True
 
-    def add_stat(self,
-                 stat_name: str,
-                 calculation_func: Optional[Callable[..., Any]] = None,
-                 value: Any = None,
-                 per_column: bool = False,
-                 store_output_index: Optional[int] = None,
-                 update_with_output_index: Optional[int] = None,
-                 **kwargs: Any) -> None:
+    def add_stat(
+        self,
+        stat_name: str,
+        calculation_func: Optional[Callable[..., Any]] = None,
+        value: Any = None,
+        per_column: bool = False,
+        store_output_index: Optional[int] = None,
+        update_with_output_index: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Add a custom statistic to the DataFrame.
 
@@ -360,55 +423,65 @@ class PredeterminedInfoAccessor:
             ValueError: If the value is not JSON serialisable
         """
         self._check_initialized()
-        safe_log("info", f"Adding predetermined information '{stat_name}' to DataFrame attributes")
+        safe_log(
+            "info",
+            f"Adding predetermined information '{stat_name}' to DataFrame attributes",
+        )
 
         if value is None and calculation_func is not None:
             if per_column:
                 value = {}
                 updated_columns = {}
                 for col in self._obj.columns:
+
                     def calculate_for_column(**kwargs: Any) -> Any:
                         result = calculation_func(self._obj[col], **kwargs)
                         if isinstance(result, tuple):
-                            stat_value = result[store_output_index] if store_output_index is not None else result[0]
+                            stat_value = (
+                                result[store_output_index]
+                                if store_output_index is not None
+                                else result[0]
+                            )
                             if update_with_output_index is not None:
                                 updated_columns[col] = result[update_with_output_index]
                             return stat_value
                         return result
 
                     value[col] = safe_calculate(
-                        calculate_for_column,
-                        default_value=None,
-                        **kwargs
+                        calculate_for_column, default_value=None, **kwargs
                     )
 
                 if updated_columns:
                     for col, series in updated_columns.items():
                         self._obj[col] = series
-                    safe_log("info", f"Updated {len(updated_columns)} columns with new values")
+                    safe_log(
+                        "info",
+                        f"Updated {len(updated_columns)} columns with new values",
+                    )
             else:
+
                 def calculate_for_df(**kwargs: Any) -> Any:
                     result = calculation_func(self._obj, **kwargs)
                     if isinstance(result, tuple):
-                        return result[store_output_index] if store_output_index is not None else result[0]
+                        return (
+                            result[store_output_index]
+                            if store_output_index is not None
+                            else result[0]
+                        )
                     return result
 
-                value = safe_calculate(
-                    calculate_for_df,
-                    default_value=None,
-                    **kwargs
-                )
+                value = safe_calculate(calculate_for_df, default_value=None, **kwargs)
 
         try:
             json.dumps(value)
         except TypeError:
-            safe_log("error", f"Value for information '{stat_name}' must be JSON serializable")
+            safe_log(
+                "error",
+                f"Value for information '{stat_name}' must be JSON serializable",
+            )
             raise AlgorithmError(f"Value for {stat_name} must be JSON serializable")
 
-        self._obj.attrs['stats'][stat_name] = {
-            'value': value,
-            'per_column': per_column
-        }
+        self._obj.attrs["stats"][stat_name] = {"value": value, "per_column": per_column}
         safe_log("info", f"Successfully added information on '{stat_name}'")
 
     def get_stat(self, stat_name: str, column: Optional[str] = None) -> Any:
@@ -425,21 +498,25 @@ class PredeterminedInfoAccessor:
         Raises:
             KeyError: If statistic not found
         """
-        if stat_name not in self._obj.attrs['stats']:
+        if stat_name not in self._obj.attrs["stats"]:
             safe_log("error", f"Statistic '{stat_name}' not found")
             raise InputError(f"Statistic '{stat_name}' not found")
 
-        stat = self._obj.attrs['stats'][stat_name]
+        stat = self._obj.attrs["stats"][stat_name]
 
-        if stat['per_column']:
+        if stat["per_column"]:
             if column is None:
-                safe_log("info", f"Retrieving predetermined '{stat_name}' for all columns")
-                return stat['value']
-            safe_log("info", f"Retrieving predetermined '{stat_name}' for column '{column}'")
-            return stat['value'].get(column)
+                safe_log(
+                    "info", f"Retrieving predetermined '{stat_name}' for all columns"
+                )
+                return stat["value"]
+            safe_log(
+                "info", f"Retrieving predetermined '{stat_name}' for column '{column}'"
+            )
+            return stat["value"].get(column)
 
         safe_log("info", f"Retrieving predetermined information on '{stat_name}'")
-        return stat['value']
+        return stat["value"]
 
     def get_column_stats(self, column: str) -> Dict[str, Any]:
         """
@@ -458,19 +535,23 @@ class PredeterminedInfoAccessor:
             safe_log("error", f"Column '{column}' not found in DataFrame")
             raise InputError(f"Column '{column}' not found in DataFrame")
 
-        safe_log("info", f"Retrieving all predetermined statistics for column '{column}'")
+        safe_log(
+            "info", f"Retrieving all predetermined statistics for column '{column}'"
+        )
 
         column_stats = {}
-        for stat_name, stat_info in self._obj.attrs.get('stats', {}).items():
-            if stat_info['per_column']:
-                if column in stat_info['value']:
-                    column_stats[stat_name] = stat_info['value'][column]
+        for stat_name, stat_info in self._obj.attrs.get("stats", {}).items():
+            if stat_info["per_column"]:
+                if column in stat_info["value"]:
+                    column_stats[stat_name] = stat_info["value"][column]
 
         stats_count = len(column_stats)
         if stats_count == 0:
             safe_log("info", f"No predetermined statistics found for column '{column}'")
         elif stats_count <= 2:
-            safe_log("warn", "For only 1-2 statistics, consider using get_stat() directly")
+            safe_log(
+                "warn", "For only 1-2 statistics, consider using get_stat() directly"
+            )
         else:
             safe_log("info", f"Retrieved {stats_count} statistics efficiently")
 
@@ -484,7 +565,7 @@ class PredeterminedInfoAccessor:
             Dict[str, Any]: Dictionary of stored statistics
         """
         safe_log("info", "Listing all available predetermined information")
-        return self._obj.attrs.get('stats', {})
+        return self._obj.attrs.get("stats", {})
 
     def update_stat(self, stat_name: str, **kwargs: Any) -> None:
         """
@@ -497,13 +578,18 @@ class PredeterminedInfoAccessor:
         Raises:
             KeyError: If statistic not found
         """
-        if stat_name not in self._obj.attrs['stats']:
-            safe_log("error", f"Cannot update: predetermined information on '{stat_name}' not found")
+        if stat_name not in self._obj.attrs["stats"]:
+            safe_log(
+                "error",
+                f"Cannot update: predetermined information on '{stat_name}' not found",
+            )
             raise InputError(f"Predetermined information '{stat_name}' not found")
 
         safe_log("info", f"Updating information on '{stat_name}'")
-        current_stat = self._obj.attrs['stats'][stat_name]
-        self.add_stat(stat_name,
-                      calculation_func=current_stat.get('calculation_func'),
-                      per_column=current_stat['per_column'],
-                      **kwargs)
+        current_stat = self._obj.attrs["stats"][stat_name]
+        self.add_stat(
+            stat_name,
+            calculation_func=current_stat.get("calculation_func"),
+            per_column=current_stat["per_column"],
+            **kwargs,
+        )
