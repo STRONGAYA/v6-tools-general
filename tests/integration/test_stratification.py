@@ -160,10 +160,6 @@ class TestDataStratificationWorkflow:
             # Each result should be a valid dictionary
             for result in local_results:
                 assert isinstance(result, dict)
-                # Should have either numerical or categorical results
-                has_results = ("numerical" in result and result["numerical"]) or (
-                    "categorical" in result and result["categorical"]
-                )
                 # Verify results structure - stratified data might be empty due to filtering
                 assert isinstance(result.get("numerical", ""), str)
                 assert isinstance(result.get("categorical", ""), str)
