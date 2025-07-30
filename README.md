@@ -4,10 +4,10 @@
 ![Coverage](https://raw.githubusercontent.com/STRONGAYA/v6-tools-general/main/tests/coverage-badge.svg)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licence](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![STRONG AYA Algorithm Guideline Conformity: Pending](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-pending-yellow)
+![STRONG AYA Algorithm Guideline Conformity: v1.0.0 Pending](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20pending-yellow)
 <!--
 To show the approved badge instead, use:
-![STRONG AYA Algorithm Guideline Conformity: Approved](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-approved-brightgreen)
+![STRONG AYA Algorithm Guideline Conformity: v1.0.0 Approved](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20approved-brightgreen)
 -->
 
 # Purpose of this repository
@@ -42,13 +42,13 @@ algorithm.
 For the `requirements.txt` file, you can add the following line to the file:
 
 ```
-git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.3
+git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.0
 ```
 
 For the `setup.py` file, you can add the following line to the `install_requires` list:
 
 ```python
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.3",
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.0",
 ```
 
 The algorithm's `setup.py`, particularly the `install_requirements`, section file should then look something like this:
@@ -75,7 +75,7 @@ setup(
         'vantage6-algorithm-tools',
         'numpy',
         'pandas',
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.3"
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.0"
         # other dependencies
     ]
 )
