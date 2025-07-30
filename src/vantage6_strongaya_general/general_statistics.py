@@ -156,7 +156,7 @@ def compute_aggregate_adjusted_deviation(
     if return_partials:
         safe_log("warn", "Returning partial aggregate-adjusted deviation statistics")
         results_general_statistics.update(
-            {"partial_deviation_results": results_adjusted_deviation}
+            {"partial_deviation_results": str(results_adjusted_deviation)}
         )
         return results_general_statistics
     else:
@@ -1113,7 +1113,7 @@ def _compute_local_value_counts(column_values: pd.Series) -> pd.Series:
 
 def _compute_local_aggregated_adjusted_deviation(
     inliers_series: pd.Series, aggregate_mean: float
-) -> Tuple[float, float]:
+) -> Tuple[float, int]:
     """
     Compute the adjusted sum of squared errors and the number of rows.
 
@@ -1122,7 +1122,7 @@ def _compute_local_aggregated_adjusted_deviation(
         aggregate_mean (float): The mean to use for the adjusted sum of squared errors.
 
     Returns:
-        Tuple[float, float]: A tuple containing the adjusted sum of squared errors and the number of rows.
+        Tuple[float, int]: A tuple containing the adjusted sum of squared errors and the number of rows.
     """
     # Retrieve the adjusted sum of squared errors safely
     adjusted_sum_of_squared_errors = safe_calculate(

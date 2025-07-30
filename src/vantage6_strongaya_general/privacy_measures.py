@@ -726,7 +726,7 @@ def _apply_dp_to_datetime(
         bins = [min_date + i * bin_size for i in range(bin_count + 1)]
 
     # Create histogram with specified bins
-    hist, bin_edges = np.histogram(valid_data, bins=bins)
+    hist, bin_edges = np.histogram(valid_data, bins=np.array(bins))
 
     # Convert bin edges to strings for dictionary keys
     bin_labels = [f"bin_{i}" for i in range(len(bin_edges) - 1)]
