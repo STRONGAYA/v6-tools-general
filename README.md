@@ -304,7 +304,7 @@ The test suite uses synthetic datasets that:
 Tests run automatically on every push and pull request via GitHub Actions:
 
 - Multiple Python versions (starting with 3.10)
-- Code coverage reporting (target >90%)
+- Code coverage reporting
 - Performance benchmarking
 - Security scanning
 
@@ -342,7 +342,7 @@ When contributing new functionality:
 3. **Add empirical tests** for federated vs centralised scenarios
 3. **Include edge case testing** for robustness
 4. **Update test data** if needed for new scenarios
-5. **Maintain >90% code coverage**
+5. **Maintain acceptable degree of code coverage**
 
 ### Test Guidelines
 
