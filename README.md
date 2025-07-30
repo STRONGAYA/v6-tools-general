@@ -1,6 +1,4 @@
 # STRONG AYA's General Vantage6 tools
-
-## Testing Status
 ![Tests](https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg)
 [![codecov](https://codecov.io/gh/STRONGAYA/v6-tools-general/branch/main/graph/badge.svg)](https://codecov.io/gh/STRONGAYA/v6-tools-general)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
