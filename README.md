@@ -1,19 +1,23 @@
 # STRONG AYA's General Vantage6 tools
 
-![Tests](https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg)
-![Coverage](https://raw.githubusercontent.com/STRONGAYA/v6-tools-general/main/tests/coverage-badge.svg)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Licence](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![STRONG AYA Algorithm Guideline Conformity: v1.0.0 Pending](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20pending-yellow)](https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf)
+<p align="center">
+<a href="https://github.com/STRONGAYA/v6-tools-general/workflows/><img alt="Test status" src="https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg"></a>
+<a><img alt="Coverage" src="https://raw.githubusercontent.com/STRONGAYA/v6-tools-general/main/tests/coverage-badge.svg"></a>
+<a href="https://www.python.org/downloads/"><img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10+-blue.svg"></a>
+<a href="https://opensource.org/licenses/Apache-2.0"><img alt="Licence: Apache 2.0" src="https://img.shields.io/badge/Licence-Apache%202.0-blue.svg"></a>
+<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: v1.0.0 Pending" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20pending-yellow">
+<br>
+<a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+<a href="https://flake8.pycqa.org/"><img alt="Linting: flake8" src="https://img.shields.io/badge/linting-flake8-informational"></a>
+<a href="http://mypy-lang.org/"><img alt="Type checking: mypy" src="https://img.shields.io/badge/type%20checking-mypy-informational"></a>
+<a href="https://github.com/PyCQA/bandit"><img alt="Security: bandit" src="https://img.shields.io/badge/security-bandit-informational"></a>
+<a href="https://github.com/pyupio/safety"><img alt="Security: safety" src="https://img.shields.io/badge/security-safety-informational"></a>
+</p>
+
 <!--
 To show the approved badge instead, use:
-[![STRONG AYA Algorithm Guideline Conformity: v1.0.0 Approved](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20approved-brightgreen)](https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf)
+<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: v1.0.0 Approved" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20approved-brightgreen">
 -->
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Linting: flake8](https://img.shields.io/badge/linting-flake8-informational)](https://flake8.pycqa.org/)
-[![Type checking: mypy](https://img.shields.io/badge/type%20checking-mypy-informational)](http://mypy-lang.org/)
-[![Security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
-[![Security: safety](https://img.shields.io/badge/security-safety-informational)](https://github.com/pyupio/safety)
 
 # Purpose of this repository
 
@@ -159,7 +163,8 @@ from vantage6.algorithm.client import AlgorithmClient
 from vantage6_strongaya_general.general_statistics import compute_local_general_statistics
 from vantage6_strongaya_general.miscellaneous import apply_data_stratification, set_datatypes, safe_log
 from vantage6_strongaya_general.privacy_measures import apply_sample_size_threshold, mask_unnecessary_variables,
-    apply_differential_privacy
+
+apply_differential_privacy
 
 
 @data(1)
@@ -357,7 +362,6 @@ When contributing new functionality:
 - Use realistic synthetic data
 - Mock external dependencies (AlgorithmClient, environment variables)
 - Validate both structure and values of results
-
 
 # Contributers
 
