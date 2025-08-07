@@ -4,11 +4,16 @@
 ![Coverage](https://raw.githubusercontent.com/STRONGAYA/v6-tools-general/main/tests/coverage-badge.svg)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Licence](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![STRONG AYA Algorithm Guideline Conformity: Pending](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-pending-yellow)
+[![STRONG AYA Algorithm Guideline Conformity: v1.0.0 Pending](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20pending-yellow)](https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf)
 <!--
 To show the approved badge instead, use:
-![STRONG AYA Algorithm Guideline Conformity: Approved](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-approved-brightgreen)
+[![STRONG AYA Algorithm Guideline Conformity: v1.0.0 Approved](https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20approved-brightgreen)](https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf)
 -->
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Linting: flake8](https://img.shields.io/badge/linting-flake8-informational)](https://flake8.pycqa.org/)
+[![Type checking: mypy](https://img.shields.io/badge/type%20checking-mypy-informational)](http://mypy-lang.org/)
+[![Security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![Security: safety](https://img.shields.io/badge/security-safety-informational)](https://github.com/pyupio/safety)
 
 # Purpose of this repository
 
@@ -42,13 +47,13 @@ algorithm.
 For the `requirements.txt` file, you can add the following line to the file:
 
 ```
-git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.3
+git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.0
 ```
 
 For the `setup.py` file, you can add the following line to the `install_requires` list:
 
 ```python
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.3",
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.0",
 ```
 
 The algorithm's `setup.py`, particularly the `install_requirements`, section file should then look something like this:
@@ -75,7 +80,7 @@ setup(
         'vantage6-algorithm-tools',
         'numpy',
         'pandas',
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v0.1.3"
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.0"
         # other dependencies
     ]
 )
@@ -364,4 +369,4 @@ When contributing new functionality:
 
 - [STRONG AYA](https://strongaya.eu/)
 - [Vantage6](vantage6.ai)
-- [STRONG AYA Algorithm Guidelines] To be released September 2025
+- [STRONG AYA Algorithm Guidelines](https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf)

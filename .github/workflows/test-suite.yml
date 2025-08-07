@@ -77,8 +77,8 @@ jobs:
     - name: Commit coverage badge
       if: github.ref == 'refs/heads/main'
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
         git add tests/coverage-badge.svg
         git diff --staged --quiet || git commit -m "Update coverage badge to $COVERAGE_PERCENTAGE%"
         git push
