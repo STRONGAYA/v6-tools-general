@@ -1,11 +1,11 @@
 # STRONG AYA's General Vantage6 tools
 
 <p align="center">
-<a href="https://github.com/STRONGAYA/v6-tools-general/workflows/><img alt="Test status" src="https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg"></a>
+<a href="https://github.com/STRONGAYA/v6-tools-general/workflows/"><img alt="Test status" src="https://github.com/STRONGAYA/v6-tools-general/workflows/Test%20Suite/badge.svg"></a>
 <a><img alt="Coverage" src="https://raw.githubusercontent.com/STRONGAYA/v6-tools-general/main/tests/coverage-badge.svg"></a>
 <a href="https://www.python.org/downloads/"><img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10+-blue.svg"></a>
 <a href="https://opensource.org/licenses/Apache-2.0"><img alt="Licence: Apache 2.0" src="https://img.shields.io/badge/Licence-Apache%202.0-blue.svg"></a>
-<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: v1.0.0 Pending" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20pending-yellow">
+<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: v1.0.0 Pending" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.0%20pending-yellow"></a>
 <br>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 <a href="https://flake8.pycqa.org/"><img alt="Linting: flake8" src="https://img.shields.io/badge/linting-flake8-informational"></a>
