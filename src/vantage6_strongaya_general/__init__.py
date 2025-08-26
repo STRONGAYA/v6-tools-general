@@ -6,6 +6,8 @@ from .miscellaneous import (
     safe_log,
     safe_calculate,
     collect_organisation_ids,
+    check_variable_availability,
+    check_partial_result_presence,
     apply_data_stratification,
     set_datatypes,
 )
@@ -27,6 +29,8 @@ __all__ = [
     "safe_log",
     "safe_calculate",
     "collect_organisation_ids",
+    "check_variable_availability",
+    "check_partial_result_presence",
     "apply_data_stratification",
     "set_datatypes",
     "mask_unnecessary_variables",

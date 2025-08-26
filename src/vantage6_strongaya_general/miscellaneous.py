@@ -4,7 +4,7 @@ Miscellaneous Utility Functions
 
 File organisation:
 - Core utility functions (safe_log, safe_calculate)
-- Data handling utilities (collect_organisation_ids)
+- Data handling utilities (collect_organisation_ids, check_variable_availability, check_partial_result_presence)
 - Data transformation functions (apply_data_stratification, set_datatypes)
 - DataFrame accessor for storing and retrieving predetermined information and/or statistics (PredeterminedInfoAccessor)
 ------------------------------------------------------------------------------
