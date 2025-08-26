@@ -388,14 +388,14 @@ def check_variable_availability(df: pd.DataFrame, variables: List[str]) -> bool:
 
 
 def check_partial_result_presence(
-    partial_results: List[str], expected_number_of_partials: int
+    partial_results: List[str], included_organisations: List[int]
 ) -> bool:
     """
     Check if the partial results from subtasks are present and valid.
 
     Args:
         partial_results (List[str]): List of results from subtasks.
-        expected_number_of_partials (int): Expected number of partial results.
+        included_organisations (List[int]): List of organisation identifiers that partook in the task.
 
     Returns:
         bool: True if all expected results are present, raises a CollectResultsError otherwise.
@@ -408,18 +408,16 @@ def check_partial_result_presence(
             "consider relaxing input requirements such as stratification parameters."
         )
     # If there is a result, but it does not contain the expected number of results, throw an error
-    elif (
-        isinstance(partial_results, list)
-        and len(partial_results) != expected_number_of_partials
+    elif isinstance(partial_results, list) and len(partial_results) != len(
+        included_organisations
     ):
         raise CollectResultsError(
             "Not all organisation returned a result, "
             "evaluate nodes' logs for more information or "
             "consider relaxing input requirements such as stratification parameters."
         )
-    elif (
-        isinstance(partial_results, list)
-        and len(partial_results) == expected_number_of_partials
+    elif isinstance(partial_results, list) and len(partial_results) == len(
+        included_organisations
     ):
         safe_log(
             "info",

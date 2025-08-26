@@ -154,7 +154,9 @@ class TestComputeLocalGeneralStatistics:
         result = compute_local_general_statistics(single_row_df)
 
         # Parse numerical results
-        numerical_df = pd.read_json(StringIO(result["numerical"]))
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
         numeric_stats = numerical_df[numerical_df["variable"] == "value"]
         stats_dict = dict(zip(numeric_stats["statistic"], numeric_stats["value"]))
 
