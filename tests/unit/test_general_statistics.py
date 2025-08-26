@@ -34,11 +34,13 @@ class TestComputeLocalGeneralStatistics:
 
         # Check structure
         assert isinstance(result, dict)
-        assert "numerical" in result
-        assert "categorical" in result
+        assert "numerical_general_partial_statistics" in result
+        assert "categorical_general_partial_statistics" in result
 
         # Parse numerical results
-        numerical_df = pd.read_json(StringIO(result["numerical"]))
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
 
         # Check that all numerical variables are included
         variables_in_result = numerical_df["variable"].unique()
@@ -71,10 +73,12 @@ class TestComputeLocalGeneralStatistics:
 
         # Check structure
         assert isinstance(result, dict)
-        assert "categorical" in result
+        assert "categorical_general_partial_statistics" in result
 
         # Parse categorical results
-        categorical_df = pd.read_json(StringIO(result["categorical"]))
+        categorical_df = pd.read_json(
+            StringIO(result["categorical_general_partial_statistics"])
+        )
 
         # Check that all categorical variables are included
         variables_in_result = categorical_df["variable"].unique()
@@ -100,12 +104,16 @@ class TestComputeLocalGeneralStatistics:
         result = compute_local_general_statistics(mixed_data_sample)
 
         # Both numerical and categorical results should be present
-        assert "numerical" in result
-        assert "categorical" in result
+        assert "numerical_general_partial_statistics" in result
+        assert "categorical_general_partial_statistics" in result
 
         # Parse results
-        numerical_df = pd.read_json(StringIO(result["numerical"]))
-        categorical_df = pd.read_json(StringIO(result["categorical"]))
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
+        categorical_df = pd.read_json(
+            StringIO(result["categorical_general_partial_statistics"])
+        )
 
         # Check that numerical variables are properly classified
         numerical_vars = numerical_df["variable"].unique()
@@ -125,12 +133,16 @@ class TestComputeLocalGeneralStatistics:
 
         # Should return empty results but with proper structure
         assert isinstance(result, dict)
-        assert "numerical" in result
-        assert "categorical" in result
+        assert "numerical_general_partial_statistics" in result
+        assert "categorical_general_partial_statistics" in result
 
         # Parse results - should be empty DataFrames
-        numerical_df = pd.read_json(StringIO(result["numerical"]))
-        categorical_df = pd.read_json(StringIO(result["categorical"]))
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
+        categorical_df = pd.read_json(
+            StringIO(result["categorical_general_partial_statistics"])
+        )
 
         assert len(numerical_df) == 0
         assert len(categorical_df) == 0
@@ -153,7 +165,9 @@ class TestComputeLocalGeneralStatistics:
         assert stats_dict["min"] == stats_dict["max"] == 42
 
         # Parse categorical results
-        categorical_df = pd.read_json(StringIO(result["categorical"]))
+        categorical_df = pd.read_json(
+            StringIO(result["categorical_general_partial_statistics"])
+        )
         cat_counts = categorical_df[categorical_df["variable"] == "category"]
 
         # Should have one category with count of 1
@@ -168,7 +182,9 @@ class TestComputeLocalGeneralStatistics:
         result = compute_local_general_statistics(nan_df)
 
         # Parse results
-        numerical_df = pd.read_json(StringIO(result["numerical"]))
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
 
         # Check that all-NaN columns are handled appropriately
         # They might be excluded or have count=0

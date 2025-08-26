@@ -69,8 +69,8 @@ VariableDetails = Union[CategoricalDetails, NonCategoricalDetails]
 
 
 def apply_data_stratification(
-        df: pd.DataFrame,
-        variables_to_stratify: Optional[StratificationDetails],
+    df: pd.DataFrame,
+    variables_to_stratify: Optional[StratificationDetails],
 ) -> pd.DataFrame:
     """
     Stratify the DataFrame based on the specified variables.
@@ -96,9 +96,9 @@ def apply_data_stratification(
         pd.DataFrame: The stratified DataFrame.
     """
     if (
-            variables_to_stratify is None
-            or not isinstance(variables_to_stratify, dict)
-            or len(variables_to_stratify) == 0
+        variables_to_stratify is None
+        or not isinstance(variables_to_stratify, dict)
+        or len(variables_to_stratify) == 0
     ):
         return df
 
@@ -141,7 +141,7 @@ def apply_data_stratification(
 
 
 def collect_organisation_ids(
-        organisation_ids: Optional[List[int]], client: AlgorithmClient
+    organisation_ids: Optional[List[int]], client: AlgorithmClient
 ) -> List[int]:
     """
     Collect organisation IDs, ensuring they are a list of integers.
@@ -182,9 +182,9 @@ def collect_organisation_ids(
 
 
 def safe_log(
-        level: Literal["info", "warn", "error"],
-        message: str,
-        variables: Optional[List[str]] = None,
+    level: Literal["info", "warn", "error"],
+    message: str,
+    variables: Optional[List[str]] = None,
 ) -> None:
     """
     Safely log messages without leaking sensitive data.
@@ -206,9 +206,9 @@ def safe_log(
 
     # Ensure that the message ends with a period if proper punctuation is not yet present
     if (
-            not message.endswith(".")
-            and not message.endswith("?")
-            and not message.endswith("!")
+        not message.endswith(".")
+        and not message.endswith("?")
+        and not message.endswith("!")
     ):
         message += "."
 
@@ -222,7 +222,7 @@ def safe_log(
 
 
 def safe_calculate(
-        calculation_func: Callable[..., T], default_value: Optional[T] = None, **kwargs: Any
+    calculation_func: Callable[..., T], default_value: Optional[T] = None, **kwargs: Any
 ) -> T:
     """
     Safely execute a calculation without leaking data in exceptions.
@@ -244,7 +244,7 @@ def safe_calculate(
 
 
 def set_datatypes(
-        df: pd.DataFrame, variable_details: Dict[str, VariableDetails]
+    df: pd.DataFrame, variable_details: Dict[str, VariableDetails]
 ) -> pd.DataFrame:
     """
     Set the datatypes for each variable in the DataFrame based on the provided details.
@@ -302,12 +302,12 @@ def set_datatypes(
 
 
 def sum_variables(
-        df: pd.DataFrame,
-        variables: List[str],
-        new_variable_name: str,
-        check_range: Optional[Tuple[float, float]] = None,
-        required_items: Optional[int] = None,
-        strict: Optional[bool] = True,
+    df: pd.DataFrame,
+    variables: List[str],
+    new_variable_name: str,
+    check_range: Optional[Tuple[float, float]] = None,
+    required_items: Optional[int] = None,
+    strict: Optional[bool] = True,
 ) -> pd.DataFrame:
     """
     Sum the specified variables in the DataFrame and create a new variable with the result.
@@ -363,9 +363,7 @@ def sum_variables(
     return df
 
 
-def check_variable_availability(
-        df: pd.DataFrame, variables: List[str]
-) -> bool:
+def check_variable_availability(df: pd.DataFrame, variables: List[str]) -> bool:
     """
     Check if all specified variables are present in the DataFrame.
 
@@ -382,12 +380,16 @@ def check_variable_availability(
             "error",
             f"Missing variables in DataFrame: {', '.join(missing_vars)}",
         )
-        raise UserInputError(f"Not all specified variables were found in the working copy of the DataFrame, "
-                             f"ensure that spelling of input parameters is correct.")
+        raise UserInputError(
+            "Not all specified variables were found in the working copy of the DataFrame, "
+            "ensure that spelling of input parameters is correct."
+        )
     return True
 
 
-def check_partial_result_presence(partial_results: List[str], expected_number_of_partials: int) -> bool:
+def check_partial_result_presence(
+    partial_results: List[str], expected_number_of_partials: int
+) -> bool:
     """
     Check if the partial results from subtasks are present and valid.
 
@@ -400,20 +402,35 @@ def check_partial_result_presence(partial_results: List[str], expected_number_of
     """
     # Check if there is any result
     if isinstance(partial_results, list) and len(partial_results) == 0:
-        raise CollectResultsError("Subtasks results are empty, "
-                                  "evaluate nodes' logs for more information or "
-                                  "consider relaxing input requirements such as stratification parameters.")
+        raise CollectResultsError(
+            "Subtasks results are empty, "
+            "evaluate nodes' logs for more information or "
+            "consider relaxing input requirements such as stratification parameters."
+        )
     # If there is a result, but it does not contain the expected number of results, throw an error
-    elif isinstance(partial_results, list) and len(partial_results) != len(expected_number_of_partials):
-        raise CollectResultsError("Not all organisation returned a result, "
-                                  "evaluate nodes' logs for more information or "
-                                  "consider relaxing input requirements such as stratification parameters.")
-    elif isinstance(partial_results, list) and len(partial_results) == len(expected_number_of_partials):
-        safe_log("info", "All organisations returned results for the general statistics subtask.")
+    elif (
+        isinstance(partial_results, list)
+        and len(partial_results) != expected_number_of_partials
+    ):
+        raise CollectResultsError(
+            "Not all organisation returned a result, "
+            "evaluate nodes' logs for more information or "
+            "consider relaxing input requirements such as stratification parameters."
+        )
+    elif (
+        isinstance(partial_results, list)
+        and len(partial_results) == expected_number_of_partials
+    ):
+        safe_log(
+            "info",
+            "All organisations returned results for the general statistics subtask.",
+        )
         return True
     else:
-        raise CollectResultsError("Unexpected results format received from the subtask. "
-                                  "Please check the algorithm input or the nodes' logs for more information.")
+        raise CollectResultsError(
+            "Unexpected results format received from the subtask. "
+            "Please check the algorithm input or the nodes' logs for more information."
+        )
 
 
 @pd.api.extensions.register_dataframe_accessor("predetermined_info")
@@ -453,14 +470,14 @@ class PredeterminedInfoAccessor:
             self._initialized = True
 
     def add_stat(
-            self,
-            stat_name: str,
-            calculation_func: Optional[Callable[..., Any]] = None,
-            value: Any = None,
-            per_column: bool = False,
-            store_output_index: Optional[int] = None,
-            update_with_output_index: Optional[int] = None,
-            **kwargs: Any,
+        self,
+        stat_name: str,
+        calculation_func: Optional[Callable[..., Any]] = None,
+        value: Any = None,
+        per_column: bool = False,
+        store_output_index: Optional[int] = None,
+        update_with_output_index: Optional[int] = None,
+        **kwargs: Any,
     ) -> None:
         """
         Add a custom statistic to the DataFrame.

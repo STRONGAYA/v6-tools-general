@@ -7,8 +7,6 @@ federated learning workflows.
 """
 
 import pytest
-import pandas as pd
-from unittest.mock import patch
 
 from vantage6_strongaya_general.miscellaneous import (
     collect_organisation_ids,
@@ -50,7 +48,9 @@ class TestVariableAndResultChecksIntegration:
         # Variables should still be available after stratification
         check_variable_availability(stratified, ["age", "gender"])
 
-    def test_federated_workflow_simulation(self, mixed_data_sample, mock_algorithm_client):
+    def test_federated_workflow_simulation(
+        self, mixed_data_sample, mock_algorithm_client
+    ):
         """Test simulated federated learning workflow."""
         # Step 1: Validate input variables
         required_vars = ["age", "gender", "treatment"]
@@ -90,7 +90,7 @@ class TestVariableAndResultChecksIntegration:
         # Apply very restrictive stratification
         restrictive_stratification = {
             "age": {"start": 40, "end": 45},
-            "gender": ["Male"]
+            "gender": ["Male"],
         }
 
         stratified = apply_data_stratification(
@@ -102,4 +102,3 @@ class TestVariableAndResultChecksIntegration:
 
         # But dataset might be very small
         assert len(stratified) <= len(mixed_data_sample)
-

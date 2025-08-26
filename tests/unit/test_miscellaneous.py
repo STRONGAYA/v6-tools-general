@@ -480,7 +480,9 @@ class TestCheckVariableAvailability:
         """Test that errors are logged."""
         with pytest.raises(UserInputError):
             check_variable_availability(mixed_data_sample, ["missing_var"])
-        mock_safe_log.assert_called_with("error", "Missing variables in DataFrame: missing_var")
+        mock_safe_log.assert_called_with(
+            "error", "Missing variables in DataFrame: missing_var"
+        )
 
 
 class TestCheckPartialResultPresence:
@@ -522,5 +524,6 @@ class TestCheckPartialResultPresence:
         """Test success is logged."""
         check_partial_result_presence(["result1", "result2"], [1, 2])
         mock_safe_log.assert_called_with(
-            "info", "All organisations returned results for the general statistics subtask."
+            "info",
+            "All organisations returned results for the general statistics subtask.",
         )
