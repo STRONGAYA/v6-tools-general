@@ -41,8 +41,8 @@ def compute_aggregate_general_statistics(
 
     for result in results:
         for result_, variables in result.items():
-            if result_ == "categorical":
-                categorical_df = pd.read_json(stringIO(result["categorical"]))
+            if result_ == "categorical_general_partial_statistics":
+                categorical_df = pd.read_json(stringIO(result["categorical_general_partial_statistics"]))
 
                 # Avoid concatenating empty DataFrames
                 if aggregate_categorical_df.empty:
@@ -52,8 +52,8 @@ def compute_aggregate_general_statistics(
                         [aggregate_categorical_df, categorical_df]
                     )
 
-            elif result_ == "numerical":
-                numerical_df = pd.read_json(stringIO(result["numerical"]))
+            elif result_ == "numerical_general_partial_statistics":
+                numerical_df = pd.read_json(stringIO(result["numerical_general_partial_statistics"]))
 
                 # Drop the statistics that have to be aggregated separately or should not be aggregated
                 numerical_df = numerical_df[
@@ -210,8 +210,8 @@ def compute_local_general_statistics(
         )
 
     return {
-        "categorical": categorical_statistics.to_json(),
-        "numerical": numerical_statistics.to_json(),
+        "categorical_general_partial_statistics": categorical_statistics.to_json(),
+        "numerical_general_partial_statistics": numerical_statistics.to_json(),
     }
 
 

@@ -15,7 +15,10 @@ from vantage6_strongaya_general.miscellaneous import (
     collect_organisation_ids,
     apply_data_stratification,
     set_datatypes,
+    check_variable_availability,
+    check_partial_result_presence,
 )
+from vantage6.algorithm.tools.exceptions import UserInputError, CollectResultsError
 
 
 class TestSafeLog:
@@ -446,79 +449,78 @@ class TestSetDatatypes:
         assert "test_col" in result.columns
 
 
-class TestMiscellaneousIntegration:
-    """Integration tests for miscellaneous functions working together."""
+class TestCheckVariableAvailability:
+    """Unit tests for check_variable_availability function."""
 
-    def test_complete_data_preprocessing_pipeline(
-        self, mixed_data_sample, mock_algorithm_client
-    ):
-        """Test complete data preprocessing pipeline."""
-        # Step 1: Collect organization IDs
-        org_ids = collect_organisation_ids(None, mock_algorithm_client)
-        assert isinstance(org_ids, list)
+    def test_all_variables_present(self, mixed_data_sample):
+        """Test when all specified variables are present."""
+        variables = ["age", "gender", "treatment"]
+        result = check_variable_availability(mixed_data_sample, variables)
+        assert result is True
 
-        # Step 2: Set datatypes - use only types that work
-        variables_config = {"age": {"datatype": "int", "inliers": [18, 100]}}
+    def test_empty_variables_list(self, mixed_data_sample):
+        """Test with empty variables list."""
+        result = check_variable_availability(mixed_data_sample, [])
+        assert result is True
 
-        try:
-            typed_data = set_datatypes(mixed_data_sample, variables_config)
-            assert typed_data["age"].dtype.name == "Int64"
+    def test_missing_variable_raises_error(self, mixed_data_sample):
+        """Test when variables are missing."""
+        with pytest.raises(UserInputError) as exc_info:
+            check_variable_availability(mixed_data_sample, ["nonexistent_var"])
+        assert "Not all specified variables were found" in str(exc_info.value)
 
-            # Step 3: Apply stratification
-            stratification_dict = {"age": {"start": 20, "end": 80}}
+    def test_mixed_existing_and_missing_variables(self, mixed_data_sample):
+        """Test with mix of existing and missing variables."""
+        variables = ["age", "missing_var", "gender"]
+        with pytest.raises(UserInputError):
+            check_variable_availability(mixed_data_sample, variables)
 
-            stratified_data = apply_data_stratification(typed_data, stratification_dict)
-            assert len(stratified_data) <= len(typed_data)
+    @patch("vantage6_strongaya_general.miscellaneous.safe_log")
+    def test_logging_on_error(self, mock_safe_log, mixed_data_sample):
+        """Test that errors are logged."""
+        with pytest.raises(UserInputError):
+            check_variable_availability(mixed_data_sample, ["missing_var"])
+        mock_safe_log.assert_called_with("error", "Missing variables in DataFrame: missing_var")
 
-            # Pipeline should complete without errors
-            assert isinstance(stratified_data, pd.DataFrame)
 
-        except Exception as e:
-            # If any step fails, that's acceptable for this integration test
-            print(f"Pipeline step failed: {e}")
-            assert isinstance(
-                mixed_data_sample, pd.DataFrame
-            )  # At least original data is valid
+class TestCheckPartialResultPresence:
+    """Unit tests for check_partial_result_presence function."""
 
-    def test_safe_functions_error_handling(self):
-        """Test that safe functions handle errors appropriately."""
-        # Test safe_log with various inputs
-        safe_log("info", "Normal message")
+    def test_correct_number_of_results(self):
+        """Test when results match expected number."""
+        partial_results = ["result1", "result2", "result3"]
+        expected_orgs = [1, 2, 3]
+        result = check_partial_result_presence(partial_results, expected_orgs)
+        assert result is True
 
-        # Note: safe_log doesn't handle None messages - this is expected to fail
+    def test_empty_results_raises_error(self):
+        """Test when no results are returned."""
+        with pytest.raises(CollectResultsError) as exc_info:
+            check_partial_result_presence([], [1, 2, 3])
+        assert "Subtasks results are empty" in str(exc_info.value)
 
-        # Test safe_calculate with error-prone function
-        def problematic_function(x):
-            if x < 0:
-                raise ValueError("Negative input")
-            return x**0.5
+    def test_fewer_results_than_expected(self):
+        """Test when fewer results than expected."""
+        with pytest.raises(CollectResultsError) as exc_info:
+            check_partial_result_presence(["result1"], [1, 2, 3])
+        assert "Not all organisation returned a result" in str(exc_info.value)
 
-        # Should not raise exception
-        result1 = safe_calculate(problematic_function, x=9)
-        assert result1 == 3.0
+    def test_more_results_than_expected(self):
+        """Test when more results than expected."""
+        with pytest.raises(CollectResultsError) as exc_info:
+            check_partial_result_presence(["r1", "r2", "r3"], [1, 2])
+        assert "Not all organisation returned a result" in str(exc_info.value)
 
-        result2 = safe_calculate(problematic_function, default_value=None, x=-1)
-        assert result2 is None
+    def test_non_list_input_raises_error(self):
+        """Test when partial_results is not a list."""
+        with pytest.raises(CollectResultsError) as exc_info:
+            check_partial_result_presence("not_a_list", [1, 2, 3])
+        assert "Unexpected results format received" in str(exc_info.value)
 
-    def test_data_transformation_consistency(self, sample_numerical_data):
-        """Test that data transformations are consistent and reversible where applicable."""
-        original_data = sample_numerical_data.copy()
-
-        # Apply transformations
-        variables_config = {
-            "age": {"datatype": "int", "inliers": [0, 120]},
-            "height": {"datatype": "float", "inliers": [100, 250]},
-        }
-
-        transformed_data = set_datatypes(original_data, variables_config)
-
-        # Check that data integrity is maintained
-        assert len(transformed_data) == len(original_data)
-        assert all(col in transformed_data.columns for col in original_data.columns)
-
-        # Check that numerical relationships are preserved (approximately)
-        age_correlation_before = original_data["age"].corr(original_data["height"])
-        age_correlation_after = transformed_data["age"].corr(transformed_data["height"])
-
-        # Correlation should be similar (allowing for some numerical differences)
-        assert abs(age_correlation_before - age_correlation_after) < 0.1
+    @patch("vantage6_strongaya_general.miscellaneous.safe_log")
+    def test_success_logging(self, mock_safe_log):
+        """Test success is logged."""
+        check_partial_result_presence(["result1", "result2"], [1, 2])
+        mock_safe_log.assert_called_with(
+            "info", "All organisations returned results for the general statistics subtask."
+        )
