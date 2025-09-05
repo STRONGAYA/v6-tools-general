@@ -865,9 +865,7 @@ def _compute_local_inliers_and_outliers(
     else:
         safe_log(
             "warn",
-            f"Unable to determine variable type for inlier/outlier computation. "
-            f"Datatype: {datatype}, Column dtype: {column_values.dtype}. "
-            "Proceeding without determining outliers",
+            "Expected datatype to be 'categorical' or 'numerical'. Proceeding without determining outliers",
         )
         inliers_series = column_values
         outliers_series = pd.Series(dtype="Float64")
