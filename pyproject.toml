@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vantage6-strongaya-general"
-version = "1.0.1"
+version = "1.0.2"
 description = "A small library with various general tools for Vantage6 algorithms developed for the STRONG AYA Project."
 authors = [
     {name = "Joshi Hogenboom (@Jhogenboom)", email = "joshi.hogenboom@maastrichtuniversity.nl"},

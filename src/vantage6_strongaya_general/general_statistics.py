@@ -512,8 +512,10 @@ def _orchestrate_local_categorical_statistics(
         # Get the inliers for the column from the provided dictionary
         if variable_details is not None and column_name in variable_details:
             inliers = variable_details[column_name].get("inliers", None)
+            datatype = variable_details[column_name].get("datatype", "categorical")
         else:
             inliers = None
+            datatype = "categorical"
 
         # Get the inliers and outliers safely
         if "inliers_series" in column_stats and "outliers_series" in column_stats:
@@ -525,12 +527,13 @@ def _orchestrate_local_categorical_statistics(
                 (pd.Series(dtype="float64"), pd.Series(dtype="float64")),
                 column_values=value_counts,
                 inliers=inliers,
+                datatype=datatype,
             )
 
+        # Calculate the missing value count safely
         if "na" in column_stats:
             na_count = column_stats["na"]
         else:
-            # Get the missing values count and replace with pd.NA safely
             na_count, column_values = safe_calculate(
                 _compute_local_missing_values,
                 (0, pd.Series(dtype="float64")),
@@ -607,8 +610,10 @@ def _orchestrate_local_numerical_statistics(
             inliers_range = variable_details[column_name].get(
                 "inliers", [float("-inf"), float("inf")]
             )
+            datatype = variable_details[column_name].get("datatype", "numerical")
         else:
             inliers_range = [float("-inf"), float("inf")]
+            datatype = "numerical"
 
         # Identify outliers by excluding values outside the inliers range safely if they do not exist yet
         if "inlier_series" in column_stats and "outlier_series" in column_stats:
@@ -620,6 +625,7 @@ def _orchestrate_local_numerical_statistics(
                 (pd.Series(dtype="float64"), pd.Series(dtype="float64")),
                 column_values=column_values,
                 inliers=inliers_range,
+                datatype=datatype,
             )
 
         # Compute the mean safely if it does not exist yet
@@ -760,8 +766,10 @@ def _orchestrate_local_adjusted_deviation(
             inliers_range = variable_details[column_name].get(
                 "inliers", [float("-inf"), float("inf")]
             )
+            datatype = variable_details[column_name].get("datatype", "numerical")
         else:
             inliers_range = [float("-inf"), float("inf")]
+            datatype = "numerical"
 
         # Identify outliers by excluding values outside the inliers range safely
         inliers_series, outliers_series = safe_calculate(
@@ -769,6 +777,7 @@ def _orchestrate_local_adjusted_deviation(
             (pd.Series(dtype="float64"), pd.Series(dtype="float64")),
             column_values=column_values,
             inliers=inliers_range,
+            datatype=datatype,
         )
 
         # Compute the adjusted sum of squared errors safely
@@ -798,7 +807,7 @@ def _orchestrate_local_adjusted_deviation(
 
 
 def _compute_local_inliers_and_outliers(
-    column_values: pd.Series, inliers: List[Any]
+    column_values: pd.Series, inliers: List[Any], datatype: Optional[str] = None
 ) -> Tuple[pd.Series, pd.Series]:
     """
     Identify inliers and outliers based on the provided inliers list or range.
@@ -807,6 +816,7 @@ def _compute_local_inliers_and_outliers(
         column_values (pd.Series): A Series with the column values to compute the inliers and outliers for.
         inliers (List[Any]): A list of inliers for the categorical variable or
                                 a list of inliers range for numerical variables.
+        datatype (Optional[str]): The datatype of the variable ("categorical" or "numerical").
 
     Returns:
         Tuple[pd.Series, pd.Series]: A tuple containing two Series, one for inliers and one for outliers.
@@ -817,29 +827,47 @@ def _compute_local_inliers_and_outliers(
             "No inliers provided, returning all values as inliers and no outliers",
         )
         return column_values, pd.Series(dtype="Float64")
-    elif isinstance(inliers, list) and isinstance(
-        column_values.dtype, pd.CategoricalDtype
+
+    # Use explicit datatype if provided, otherwise fall back to dtype inspection
+    if datatype == "categorical" or (
+        datatype is None and isinstance(column_values.dtype, pd.CategoricalDtype)
     ):
-        # Categorical variable
+        # Categorical variable - inliers is a list of allowed values
         inliers_series = column_values[column_values.isin(inliers)]
         outliers_series = column_values[~column_values.isin(inliers)]
-    elif (
-        isinstance(inliers, list)
-        and len(inliers) == 2
-        and pd.api.types.is_numeric_dtype(column_values)
+    elif datatype == "numerical" or (
+        datatype is None and pd.api.types.is_numeric_dtype(column_values)
     ):
-        # Numerical variable
-        inliers_series = column_values[
-            (column_values >= inliers[0]) & (column_values <= inliers[1])
-        ]
-        outliers_series = column_values[
-            (column_values < inliers[0]) | (column_values > inliers[1])
-        ]
+        # Numerical variable - inliers should be a 2-element range [min, max]
+        if not isinstance(inliers, list) or len(inliers) != 2:
+            safe_log(
+                "warn",
+                f"For numerical variables, inliers must be a 2-element list [min, max]. Got: {inliers}. "
+                "Proceeding without determining outliers",
+            )
+            inliers_series = column_values
+            outliers_series = pd.Series(dtype="Float64")
+        elif not all(
+            isinstance(x, (int, float)) and type(x) is not bool for x in inliers
+        ):
+            safe_log(
+                "warn",
+                f"For numerical variables, inliers must contain numeric values. Got: {inliers}. "
+                "Proceeding without determining outliers",
+            )
+            inliers_series = column_values
+            outliers_series = pd.Series(dtype="Float64")
+        else:
+            inliers_series = column_values[
+                (column_values >= inliers[0]) & (column_values <= inliers[1])
+            ]
+            outliers_series = column_values[
+                (column_values < inliers[0]) | (column_values > inliers[1])
+            ]
     else:
         safe_log(
             "warn",
-            "Inliers are not in the correct format or are malformated for the expected datatype. "
-            "Proceeding without determining outliers",
+            "Expected datatype to be 'categorical' or 'numerical'. Proceeding without determining outliers",
         )
         inliers_series = column_values
         outliers_series = pd.Series(dtype="Float64")

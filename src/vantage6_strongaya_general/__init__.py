@@ -41,4 +41,4 @@ __all__ = [
     "compute_local_general_statistics",
     "compute_local_adjusted_deviation",
 ]
-__version__ = "1.0.1"
+__version__ = "1.0.2"
