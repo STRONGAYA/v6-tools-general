@@ -530,7 +530,7 @@ def _orchestrate_local_categorical_statistics(
                 datatype=datatype,
             )
 
-        # Calculate the missing values count safely
+        # Calculate the missing value count safely
         if "na" in column_stats:
             na_count = column_stats["na"]
         else:
