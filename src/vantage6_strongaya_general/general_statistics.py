@@ -847,6 +847,14 @@ def _compute_local_inliers_and_outliers(
             )
             inliers_series = column_values
             outliers_series = pd.Series(dtype="Float64")
+        elif not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in inliers):
+            safe_log(
+                "warn",
+                f"For numerical variables, inliers must contain numeric values. Got: {inliers}. "
+                "Proceeding without determining outliers",
+            )
+            inliers_series = column_values
+            outliers_series = pd.Series(dtype="Float64")
         else:
             inliers_series = column_values[
                 (column_values >= inliers[0]) & (column_values <= inliers[1])
