@@ -530,7 +530,7 @@ def _orchestrate_local_categorical_statistics(
                 datatype=datatype,
             )
 
-        # Get the missing values count and replace with pd.NA safely
+        # Calculate the missing values count safely
         if "na" in column_stats:
             na_count = column_stats["na"]
         else:
@@ -847,7 +847,9 @@ def _compute_local_inliers_and_outliers(
             )
             inliers_series = column_values
             outliers_series = pd.Series(dtype="Float64")
-        elif not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in inliers):
+        elif not all(
+            isinstance(x, (int, float)) and type(x) is not bool for x in inliers
+        ):
             safe_log(
                 "warn",
                 f"For numerical variables, inliers must contain numeric values. Got: {inliers}. "
