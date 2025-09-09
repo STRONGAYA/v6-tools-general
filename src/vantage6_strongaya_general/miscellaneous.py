@@ -278,7 +278,7 @@ def set_datatypes(
             elif datatype == "bool" or datatype == "boolean":
                 df[variable] = df[variable].astype("boolean")
             elif datatype == "str" or datatype == "string":
-                df[variable] = df[variable].astype("String")
+                df[variable] = df[variable].astype("string")
             elif datatype == "datetime":
                 df[variable] = pd.to_datetime(df[variable], errors="coerce")
             elif datatype == "timedelta":
