@@ -833,8 +833,8 @@ def _compute_local_inliers_and_outliers(
         datatype is None and isinstance(column_values.dtype, pd.CategoricalDtype)
     ):
         # Categorical variable - inliers is a list of allowed values
-        inliers_series = column_values[column_values.isin(inliers)]
-        outliers_series = column_values[~column_values.isin(inliers)]
+        inliers_series = column_values[column_values.index.isin(inliers)]
+        outliers_series = column_values[~column_values.index.isin(inliers)]
     elif datatype == "numerical" or (
         datatype is None and pd.api.types.is_numeric_dtype(column_values)
     ):
