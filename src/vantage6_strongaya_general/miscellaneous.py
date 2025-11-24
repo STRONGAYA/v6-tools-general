@@ -432,7 +432,7 @@ def check_partial_result_presence(
         )
 
 
-def convert_to_json_serializable(obj: Any) -> Any:
+def convert_to_json_serialisable(obj: Any) -> Any:
     """
     Convert numpy/pandas types to native Python types for JSON serialisation.
 
@@ -453,9 +453,9 @@ def convert_to_json_serializable(obj: Any) -> Any:
     elif isinstance(obj, pd.Series):
         return obj.tolist()
     elif isinstance(obj, dict):
-        return {key: convert_to_json_serializable(value) for key, value in obj.items()}
+        return {key: convert_to_json_serialisable(value) for key, value in obj.items()}
     elif isinstance(obj, (list, tuple)):
-        return [convert_to_json_serializable(item) for item in obj]
+        return [convert_to_json_serialisable(item) for item in obj]
     elif pd.isna(obj):
         return None
     return obj
@@ -573,7 +573,7 @@ class PredeterminedInfoAccessor:
                 value = safe_calculate(calculate_for_df, default_value=None, **kwargs)
 
         # Convert numpy/pandas types to native Python types
-        value = convert_to_json_serializable(value)
+        value = convert_to_json_serialisable(value)
 
         try:
             json.dumps(value)

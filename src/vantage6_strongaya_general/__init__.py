@@ -10,6 +10,7 @@ from .miscellaneous import (
     check_partial_result_presence,
     apply_data_stratification,
     set_datatypes,
+    convert_to_json_serialisable,
 )
 
 from .privacy_measures import (
@@ -33,6 +34,7 @@ __all__ = [
     "check_partial_result_presence",
     "apply_data_stratification",
     "set_datatypes",
+    "convert_to_json_serialisable",
     "mask_unnecessary_variables",
     "apply_sample_size_threshold",
     "apply_differential_privacy",
