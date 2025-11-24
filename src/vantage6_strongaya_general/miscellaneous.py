@@ -13,6 +13,7 @@ File organisation:
 import json
 
 import pandas as pd
+import numpy as np
 
 from typing import (
     Any,
@@ -77,7 +78,7 @@ def apply_data_stratification(
 
     Caution: The flexibility provided by this function may facilitate differencing attacks if not implemented carefully.
              Consider including extra privacy-enhancing mechanisms by applying differential privacy post-stratification
-             or restricting the variables on which one can stratify -
+             or restricting the variables on which one can stratify
              e.g. through environment variables or a dedicated database and/or list.
 
     Args:
@@ -431,6 +432,35 @@ def check_partial_result_presence(
         )
 
 
+def convert_to_json_serializable(obj: Any) -> Any:
+    """
+    Convert numpy/pandas types to native Python types for JSON serialisation.
+
+    Args:
+        obj (Any): The object to convert
+
+    Returns:
+        Any: A JSON-serialisable version of the object
+    """
+    if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, pd.Series):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_to_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [convert_to_json_serializable(item) for item in obj]
+    elif pd.isna(obj):
+        return None
+    return obj
+
+
 @pd.api.extensions.register_dataframe_accessor("predetermined_info")
 class PredeterminedInfoAccessor:
     """
@@ -458,7 +488,7 @@ class PredeterminedInfoAccessor:
 
     def _check_initialized(self) -> None:
         """
-        Initialize the storage if not already done.
+        Initialise the storage if not already done.
 
         Ensures the DataFrame has the necessary attribute storage structure.
         """
@@ -542,6 +572,9 @@ class PredeterminedInfoAccessor:
 
                 value = safe_calculate(calculate_for_df, default_value=None, **kwargs)
 
+        # Convert numpy/pandas types to native Python types
+        value = convert_to_json_serializable(value)
+
         try:
             json.dumps(value)
         except TypeError:
@@ -566,7 +599,7 @@ class PredeterminedInfoAccessor:
             Any: The stored statistic value
 
         Raises:
-            KeyError: If statistic not found
+            KeyError: If the statistic is not found
         """
         if stat_name not in self._obj.attrs["stats"]:
             safe_log("error", f"Statistic '{stat_name}' not found")
@@ -599,7 +632,7 @@ class PredeterminedInfoAccessor:
             Dict[str, Any]: Dictionary containing all statistics for the column
 
         Raises:
-            KeyError: If column not found in DataFrame
+            KeyError: If the column is not found in DataFrame
         """
         if column not in self._obj.columns:
             safe_log("error", f"Column '{column}' not found in DataFrame")
@@ -646,7 +679,7 @@ class PredeterminedInfoAccessor:
             **kwargs: Arguments to pass to calculation function
 
         Raises:
-            KeyError: If statistic not found
+            KeyError: If the statistic is not found
         """
         if stat_name not in self._obj.attrs["stats"]:
             safe_log(
