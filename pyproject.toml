@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vantage6-strongaya-general"
-version = "1.0.3"
+version = "1.0.4"
 description = "A small library with various general tools for Vantage6 algorithms developed for the STRONG AYA Project."
 authors = [
     {name = "Joshi Hogenboom (@Jhogenboom)", email = "joshi.hogenboom@maastrichtuniversity.nl"},
@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
     "numpy>=2.1.2",
     "pandas>=2.2.3",
-    "vantage6-algorithm-tools>=3.6.0",
+    "vantage6-algorithm-tools >=4.0.0,<=5.0.0",
 ]
 
 [project.optional-dependencies]

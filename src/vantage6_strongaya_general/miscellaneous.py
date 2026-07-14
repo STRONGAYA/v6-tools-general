@@ -168,8 +168,7 @@ def collect_organisation_ids(
             # Attempt to convert all elements to integers
             organisation_ids = [int(i) for i in organisation_ids]
         except ValueError:
-            safe_log("error", "Organisation IDs should be a list of integers")
-            return []
+            raise UserInputError("Organisation IDs should be a list of integers")
 
         # Check if the organisation IDs are valid
         for org_id in organisation_ids:
@@ -178,8 +177,7 @@ def collect_organisation_ids(
 
         return organisation_ids
     else:
-        safe_log("error", "Organisation IDs should be a list of integers")
-        return []
+        raise UserInputError("Organisation IDs should be a list of integers")
 
 
 def safe_log(

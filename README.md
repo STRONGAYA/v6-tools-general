@@ -5,7 +5,7 @@
 <a><img alt="Coverage" src="https://raw.githubusercontent.com/STRONGAYA/v6-tools-general/main/tests/coverage-badge.svg"></a>
 <a href="https://www.python.org/downloads/"><img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10+-blue.svg"></a>
 <a href="https://opensource.org/licenses/Apache-2.0"><img alt="Licence: Apache 2.0" src="https://img.shields.io/badge/Licence-Apache%202.0-blue.svg"></a>
-<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: v1.0.3 Pending" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.3%20pending-yellow"></a>
+<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: v1.0.4 Approved" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.4%20approved-brightgreen">
 <br>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 <a href="https://flake8.pycqa.org/"><img alt="Linting: flake8" src="https://img.shields.io/badge/linting-flake8-informational"></a>
@@ -16,7 +16,10 @@
 
 <!--
 To show the approved badge instead, use:
-<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: v1.0.3 Approved" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-v1.0.3%20approved-brightgreen">
+<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: vx.x.x Approved" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-vx.x.x%20approved-brightgreen">
+
+To show the pending badge instead, use:
+<a href="https://strongaya.eu/wp-content/uploads/2025/07/algorithm_review_guidelines.pdf"><img alt="STRONG AYA Algorithm Guideline Conformity: vx.x.x Pending" src="https://img.shields.io/badge/STRONG%20AYA%20Algorithm%20Guideline%20Conformity-vx.x.x%20pending-yellow"></a>
 -->
 
 # Purpose of this repository
@@ -51,13 +54,13 @@ algorithm.
 For the `requirements.txt` file, you can add the following line to the file:
 
 ```
-git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.3
+git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.4
 ```
 
 For the `setup.py` file, you can add the following line to the `install_requires` list:
 
 ```python
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.3",
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.4",
 ```
 
 The algorithm's `setup.py`, particularly the `install_requirements`, section file should then look something like this:
@@ -84,7 +87,7 @@ setup(
         'vantage6-algorithm-tools',
         'numpy',
         'pandas',
-        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.3"
+        "vantage6-strongaya-general @ git+https://github.com/STRONGAYA/v6-tools-general.git@v1.0.4"
         # other dependencies
     ]
 )
