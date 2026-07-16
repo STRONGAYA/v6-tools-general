@@ -785,7 +785,7 @@ def _orchestrate_local_adjusted_deviation(
             _compute_local_aggregated_adjusted_deviation,
             (0.0, 0),
             inliers_series=inliers_series,
-            aggregated_mean=aggregated_mean,
+            aggregate_mean=aggregated_mean,
         )
 
         # Append the adjusted deviation to the list
@@ -839,7 +839,7 @@ def _compute_local_inliers_and_outliers(
         datatype is None and pd.api.types.is_numeric_dtype(column_values)
     ):
         # Numerical variable - inliers should be a 2-element range [min, max]
-        if not isinstance(inliers, list) or len(inliers) != 2:
+        if not isinstance(inliers, (list, tuple)) or len(inliers) != 2:
             safe_log(
                 "warn",
                 f"For numerical variables, inliers must be a 2-element list [min, max]. Got: {inliers}. "
