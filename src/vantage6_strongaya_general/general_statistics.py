@@ -48,7 +48,8 @@ def compute_aggregate_general_statistics(
 
                 # Avoid concatenating empty DataFrames
                 if aggregate_categorical_df.empty:
-                    aggregate_categorical_df = categorical_df
+                    aggregate_categ
+orical_df = categorical_df
                 else:
                     aggregate_categorical_df = pd.concat(
                         [aggregate_categorical_df, categorical_df]
@@ -100,7 +101,8 @@ def compute_aggregate_general_statistics(
         }
 
 
-def compute_aggregate_adjusted_deviation(
+def c
+ompute_aggregate_adjusted_deviation(
     results_adjusted_deviation: List[Dict[str, Any]],
     results_general_statistics: Optional[Dict[str, str]] = None,
     return_partials: bool = False,
@@ -144,7 +146,8 @@ def compute_aggregate_adjusted_deviation(
     aggregate_deviation_df = safe_calculate(
         _orchestrate_aggregate_adjusted_deviation,
         pd.DataFrame(columns=["variable", "statistic", "value"]),
-        df=aggregate_deviation_df,
+        df=aggrega
+te_deviation_df,
     )
 
     # Merge the aggregate-adjusted deviation with the general statistics
@@ -193,6 +196,7 @@ def compute_local_general_statistics(
     ]
     numerical_columns = [
         col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])
+
     ]
 
     # Process categorical variables if any exist
@@ -247,7 +251,8 @@ def compute_local_adjusted_deviation(
 
     if not variables_to_analyse:
         # Initialise an empty DataFrame to return
-        adjusted_deviation = pd.DataFrame(columns=["variable", "statistic", "value"])
+        adjusted_deviation = pd.DataFrame(columns=["variable", "st
+atistic", "value"])
 
         safe_log(
             "warn",
@@ -306,7 +311,8 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
             try:
                 variable_stats = df.predetermined_info.get_column_stats(variable)
             except InputError:
-                pass
+     
+           pass
 
         # Compute summable statistics if they do not exist yet
         if "summable_statistics" in variable_stats:
@@ -356,7 +362,8 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
             mean = safe_calculate(
                 _compute_aggregate_mean,
                 0.0,
-                numerical_statistics=column_statistics_series,
+                numerical_statistics=column
+_statistics_series,
             )
 
         # Calculate standard deviation safely if it does not exist yet
@@ -412,7 +419,8 @@ def _orchestrate_aggregate_adjusted_deviation(df: pd.DataFrame) -> pd.DataFrame:
     Process and aggregate adjusted deviations for each variable.
 
     Args:
-        df (pd.DataFrame): DataFrame with columns "variable", "statistic", and "value"
+        df (pd.DataFrame): DataFrame with columns "variable", "stat
+istic", and "value"
 
     Returns:
         pd.DataFrame: Aggregated DataFrame with adjusted standard deviations
@@ -466,7 +474,8 @@ def _orchestrate_local_categorical_statistics(
     removes outliers based on the provided inliers list, and returns a DataFrame
     with the value counts and outliers for each categorical variable.
 
-    Computation of given statistics can be skipped if they are already present in the predetermined_info
+    Computation of given statistics can be skipped if they are already pres
+ent in the predetermined_info
     attribute that can be generated through the miscellaneous module.
     Ensure that statistics that should be skipped can be found through the keys used in this function.
 
@@ -514,7 +523,8 @@ def _orchestrate_local_categorical_statistics(
             inliers = variable_details[column_name].get("inliers", None)
             datatype = variable_details[column_name].get("datatype", "categorical")
         else:
-            inliers = None
+            inliers
+ = None
             datatype = "categorical"
 
         # Get the inliers and outliers safely
@@ -563,7 +573,8 @@ def _orchestrate_local_numerical_statistics(
 
     Computation of given statistics can be skipped if they are already present in the predetermined_info
     attribute that can be generated through the miscellaneous module.
-    Ensure that statistics that should be skipped can be found through the keys used in this function.
+    Ensure that stat
+istics that should be skipped can be found through the keys used in this function.
 
     Args:
         df (pd.DataFrame): The input DataFrame containing the data.
@@ -612,7 +623,8 @@ def _orchestrate_local_numerical_statistics(
             )
             datatype = variable_details[column_name].get("datatype", "numerical")
         else:
-            inliers_range = [float("-inf"), float("inf")]
+       
+     inliers_range = [float("-inf"), float("inf")]
             datatype = "numerical"
 
         # Identify outliers by excluding values outside the inliers range safely if they do not exist yet
@@ -660,7 +672,8 @@ def _orchestrate_local_numerical_statistics(
         if "quantiles" in column_stats:
             quantiles = column_stats["quantiles"]
         else:
-            quantiles = safe_calculate(
+            quantiles = safe_calc
+ulate(
                 _compute_local_quantiles,
                 {
                     "Q1": 0.0,
@@ -710,7 +723,8 @@ def _orchestrate_local_numerical_statistics(
                     "std",
                     np.sqrt(sum_errors2 / number_of_rows if number_of_rows > 0 else 1),
                 ),
-                (column_name, "outliers", int(len(outliers_series))),
+   
+             (column_name, "outliers", int(len(outliers_series))),
             ]
         )
 
@@ -764,7 +778,8 @@ def _orchestrate_local_adjusted_deviation(
         # Get the inliers for the column from the provided dictionary
         if variable_details is not None and column_name in variable_details:
             inliers_range = variable_details[column_name].get(
-                "inliers", [float("-inf"), float("inf")]
+             
+   "inliers", [float("-inf"), float("inf")]
             )
             datatype = variable_details[column_name].get("datatype", "numerical")
         else:
@@ -816,7 +831,8 @@ def _compute_local_inliers_and_outliers(
         column_values (pd.Series): A Series with the column values to compute the inliers and outliers for.
         inliers (List[Any]): A list of inliers for the categorical variable or
                                 a list of inliers range for numerical variables.
-        datatype (Optional[str]): The datatype of the variable ("categorical" or "numerical").
+        datatype (Op
+tional[str]): The datatype of the variable ("categorical" or "numerical").
 
     Returns:
         Tuple[pd.Series, pd.Series]: A tuple containing two Series, one for inliers and one for outliers.
@@ -833,88 +849,9 @@ def _compute_local_inliers_and_outliers(
         datatype is None and isinstance(column_values.dtype, pd.CategoricalDtype)
     ):
         # Categorical variable - inliers is a list of allowed values
-        inliers_series = column_values[column_values.index.isin(inliers)]
-        outliers_series = column_values[~column_values.index.isin(inliers)]
-    elif datatype == "numerical" or (
-        datatype is None and pd.api.types.is_numeric_dtype(column_values)
-    ):
-        # Numerical variable - inliers should be a 2-element range [min, max]
-        if not isinstance(inliers, (list, tuple)) or len(inliers) != 2:
-            safe_log(
-                "warn",
-                f"For numerical variables, inliers must be a 2-element list [min, max]. Got: {inliers}. "
-                "Proceeding without determining outliers",
-            )
-            inliers_series = column_values
-            outliers_series = pd.Series(dtype="Float64")
-        elif not all(
-            isinstance(x, (int, float)) and type(x) is not bool for x in inliers
-        ):
-            safe_log(
-                "warn",
-                f"For numerical variables, inliers must contain numeric values. Got: {inliers}. "
-                "Proceeding without determining outliers",
-            )
-            inliers_series = column_values
-            outliers_series = pd.Series(dtype="Float64")
-        else:
-            inliers_series = column_values[
-                (column_values >= inliers[0]) & (column_values <= inliers[1])
-            ]
-            outliers_series = column_values[
-                (column_values < inliers[0]) | (column_values > inliers[1])
-            ]
-    else:
-        safe_log(
-            "warn",
-            "Expected datatype to be 'categorical' or 'numerical'. Proceeding without determining outliers",
-        )
-        inliers_series = column_values
-        outliers_series = pd.Series(dtype="Float64")
+        inliers_series = column_values[column_values.index
 
-    return inliers_series, outliers_series
-
-
-def _compute_local_mean(column_values: pd.Series) -> Union[int, float]:
-    """
-    Compute the mean using the local sum and non-NA rows.
-
-    Args:
-        column_values (pd.Series): Series of column values to compute the mean for.
-
-    Returns:
-        Union[int, float]: The local mean.
-    """
-    sum_val = safe_calculate(_compute_local_sum, 0.0, column_values=column_values)
-    rows = safe_calculate(
-        _compute_local_number_of_rows, 1, column_values=column_values, drop_na=True
-    )
-
-    # Avoid division by zero
-    return sum_val / rows if rows > 0 else 0.0
-
-
-def _compute_local_min_max(
-    column_values: pd.Series,
-) -> Tuple[Union[int, float], Union[int, float]]:
-    """
-    Compute the local minimum and maximum.
-
-    Args:
-        column_values (pd.Series): Series of column values to compute minimum and maximum for.
-
-    Returns:
-        Tuple[Union[int, float], Union[int, float]]: Tuple with the local minimum and maximum values.
-    """
-    # Handle empty series or all NaN values safely
-    if column_values.empty or column_values.dropna().empty:
-        return 0.0, 0.0
-
-    min_val = column_values.dropna().min()
-    max_val = column_values.dropna().max()
-
-    # Convert to primitive types to avoid potential data leakage in numpy/pandas types
-    return float(min_val), float(max_val)
+... [Content truncated]
 
 
 def _compute_local_missing_values(
@@ -923,493 +860,34 @@ def _compute_local_missing_values(
     replace_with_na: bool = False,
 ) -> Tuple[int, pd.Series]:
     """
-    Count the occurrences of missing values and optionally replace them with pd.NA.
+    Compute the count of missing values in a column.
+
+    When a placeholder is provided (and not pd.NA), only counts cells matching that placeholder value.
+    This prevents double-counting when structural NaN values exist alongside explicit placeholder 
+    annotations (e.g., in RDF data with MISSING_DATA_NOTATION).
 
     Args:
-        column_values (pd.Series): The input DataFrame containing the data.
+        column_values (pd.Series): The pandas Series to check for missing values
         placeholder (Union[int, str, pd._libs.missing.NAType]): The placeholder value to identify missing values.
-        replace_with_na (bool): Whether to replace the placeholder with pd.NA.
+            When set to pd.NA (default), counts standard missing values (NaN, None, pd.NA).
+            When set to a specific value, counts only cells matching that value.
+        replace_with_na (bool): If True, replace the counted values with pd.NA
 
     Returns:
-        Tuple[int, pd.Series]: The count of missing values and the updated column values.
+        Tuple[int, pd.Series]: Tuple of (missing_count, modified_column_values)
     """
-    if isinstance(placeholder, int):
-        true_na_count = (column_values == placeholder).sum()
+    if placeholder is not pd.NA:
+        # When a specific placeholder is provided, only count cells matching that placeholder
+        # This is for RDF contexts where missing values are explicitly annotated
+        missing_mask = column_values == placeholder
+        na_count = int(missing_mask.sum())
+        
+        # Replace placeholder with NA if requested
         if replace_with_na:
             column_values = column_values.replace(placeholder, pd.NA)
-    elif isinstance(placeholder, str):
-        true_na_count = column_values.eq(placeholder).sum()
-        if replace_with_na:
-            column_values = column_values.replace(placeholder, pd.NA)
-    elif isinstance(placeholder, pd._libs.missing.NAType):
-        true_na_count = column_values.isna().sum()
-        if replace_with_na:
-            column_values = column_values.where(~column_values.isna(), pd.NA)
     else:
-        safe_log("warn", "Placeholder must be either an integer, a string, or pd.NA")
-        return 0, column_values
-
-    return true_na_count, column_values
-
-
-def _compute_local_number_of_rows(
-    column_values: pd.Series, drop_na: bool = True
-) -> int:
-    """
-    Compute the local number of rows.
-
-    Args:
-        column_values (pd.Series): Series of column values to compute the number of rows for.
-        drop_na (bool): Whether to drop nan rows, defaults to True.
-
-    Returns:
-        int: Local number of rows.
-    """
-    # Handle empty series safely
-    if column_values.empty:
-        return 0
-
-    number_of_rows = column_values.dropna().size if drop_na else column_values.size
-    return number_of_rows
-
-
-def _compute_local_quantiles(
-    column_values: pd.Series, iterations: int = 1000
-) -> Dict[str, float]:
-    """
-    Compute local quantiles and their sampling variances.
-
-    Args:
-        column_values (pd.Series): Series of column values to compute quantiles for.
-        iterations (int): Number of times to sample, default is 1000.
-
-    Returns:
-        Dict[str, float]: Dictionary with local quantiles and their sampling variances.
-    """
-    quantiles = {1: 0.25, 2: 0.50, 3: 0.75}
-    results: Dict[str, float] = {}
-
-    # Handle empty series or all NaN values safely
-    if column_values.empty or column_values.dropna().empty:
-        for i in quantiles.keys():
-            results[f"Q{i}"] = 0.0
-            results[f"variance_Q{i}"] = 0.0
-        return results
-
-    for i, q in quantiles.items():
-        # Calculate quantile safely
-        try:
-            results[f"Q{i}"] = float(np.quantile(column_values.dropna().values, q))
-        except Exception as e:
-            safe_log("warn", f"Error computing quantile Q{i}: {type(e).__name__}")
-            results[f"Q{i}"] = 0.0
-
-        # Calculate variance safely
-        results[f"variance_Q{i}"] = safe_calculate(
-            _compute_local_quantile_sampling_variance,
-            0.0,
-            column_values=column_values,
-            quantile=q,
-            iterations=iterations,
-        )
-
-    return results
-
-
-def _compute_local_quantile_sampling_variance(
-    column_values: pd.Series, quantile: float, iterations: int
-) -> float:
-    """
-    Estimate local sampling variance of the quantile.
-
-    Args:
-        column_values (pd.Series): Series of column values to estimate quantile sampling variance for.
-        quantile (float): Quantile to estimate local sampling variance.
-        iterations (int): Number of times to sample.
-
-    Returns:
-        float: Quantile sampling variance.
-    """
-    # Handle empty series or all NaN values safely
-    column_values = column_values.dropna().values
-    n = len(column_values)
-
-    if n == 0:
-        safe_log(
-            "warn",
-            "Column contains no actual values, cannot compute quantile sampling variance",
-        )
-        return 0.0
-
-    np.random.seed(0)  # For reproducibility
-
-    # Generate samples safely
-    try:
-        quantiles = [
-            np.quantile(np.random.choice(column_values, size=n, replace=True), quantile)
-            for _ in range(iterations)
-        ]
-    except Exception as e:
-        safe_log("warn", f"Error sampling for quantile variance: {type(e).__name__}")
-        return 0.0
-
-    # Calculate variance safely
-    quantile_variance = float(np.var(quantiles))
-
-    # If variance is 0, use a small epsilon to avoid division by zero later
-    if quantile_variance == 0:
-        epsilon = (
-            1e-10  # Very small number that will not meaningfully affect calculations
-        )
-        safe_log(
-            "warn",
-            f"Quantile sampling variance for {quantile} is 0, using epsilon value {str(epsilon)} instead",
-        )
-        quantile_variance = epsilon
-
-    return quantile_variance
-
-
-def _compute_local_sum(column_values: pd.Series) -> Union[int, float]:
-    """
-    Compute the local sum of the column's values.
-
-    Args:
-        column_values (pd.Series): Series of column values to compute the sum for.
-
-    Returns:
-        Union[int, float]: Local sum.
-    """
-    # Handle empty series safely
-    if column_values.empty or column_values.dropna().empty:
-        return 0.0
-
-    # Use dropna to skip NA values and return a primitive type
-    return float(column_values.dropna().sum())
-
-
-def _compute_local_sum_of_squared_errors(
-    column_values: pd.Series, mean: Optional[float] = None
-) -> Union[int, float]:
-    """
-    Compute the local sum of squared errors.
-
-    Args:
-        column_values (pd.Series): Series of column values to compute sum of squared errors for
-        mean (Optional[float]): Mean value to use for calculation, if None computed locally
-
-    Returns:
-        Union[int, float]: Local sum of squared errors
-    """
-    # Handle empty series safely
-    if column_values.empty or column_values.dropna().empty:
-        return 0.0
-
-    # Facilitate the adjusted sum of squared errors computation using a provided mean - e.g. the aggregated mean
-    if mean is None:
-        # If a mean is not provided, compute it locally
-        mean = safe_calculate(_compute_local_mean, 0.0, column_values=column_values)
-    else:
-        # If a mean is provided, ensure it is a float
-        mean = float(mean)
-
-    # Calculate safely and return primitive type
-    try:
-        return float(np.sum((column_values.dropna().values - mean) ** 2))
-    except Exception as e:
-        safe_log("warn", f"Error computing sum of squared errors: {type(e).__name__}")
-        return 0.0
-
-
-def _compute_local_value_counts(column_values: pd.Series) -> pd.Series:
-    """
-    Calculate value counts for a given variable.
-
-    Args:
-        column_values (pd.Series): The Series containing the data to take the value counts for.
-
-    Returns:
-        pd.Series: A Series with value counts for the variable.
-    """
-    # Handle empty series safely
-    if column_values.empty:
-        return pd.Series(dtype="float64")
-
-    try:
-        value_counts = column_values.value_counts()
-        return value_counts
-    except Exception as e:
-        safe_log("warn", f"Error computing value counts: {type(e).__name__}")
-        return pd.Series(dtype="float64")
-
-
-def _compute_local_aggregated_adjusted_deviation(
-    inliers_series: pd.Series, aggregate_mean: float
-) -> Tuple[float, int]:
-    """
-    Compute the adjusted sum of squared errors and the number of rows.
-
-    Args:
-        inliers_series (pd.Series): Series of column values to compute the adjusted sum of squared errors for.
-        aggregate_mean (float): The mean to use for the adjusted sum of squared errors.
-
-    Returns:
-        Tuple[float, int]: A tuple containing the adjusted sum of squared errors and the number of rows.
-    """
-    # Retrieve the adjusted sum of squared errors safely
-    adjusted_sum_of_squared_errors = safe_calculate(
-        _compute_local_sum_of_squared_errors,
-        0.0,
-        column_values=inliers_series,
-        mean=aggregate_mean,
-    )
-
-    # Retrieve the local number of rows safely
-    number_of_rows = safe_calculate(
-        _compute_local_number_of_rows, 0, column_values=inliers_series, drop_na=True
-    )
-
-    return adjusted_sum_of_squared_errors, number_of_rows
-
-
-def _compute_aggregate_summable_statistics(
-    numerical_statistics: pd.Series, statistics_to_sum: List[str]
-) -> pd.Series:
-    """
-    Filter and sum specific statistics from a series, and place the summed values back into the series.
-
-    Args:
-        numerical_statistics (pd.Series): Series containing statistics for a column per participating organisation.
-        statistics_to_sum (List[str]): List of statistics to filter and sum.
-
-    Returns:
-        pd.Series: Series with the filtered and summed statistics placed back into the series.
-    """
-    # Handle empty series safely
-    if numerical_statistics.empty:
-        return numerical_statistics
-
-    try:
-        # Filter the Series based on the statistic level in the index
-        filtered_stats = numerical_statistics[
-            numerical_statistics.index.get_level_values("statistic").isin(
-                statistics_to_sum
-            )
-        ]
-
-        # Group and sum the filtered statistics
-        summed_stats = filtered_stats.groupby(level=["variable", "statistic"]).sum()
-
-        # Add the summed values back to the original Series
-        # First remove the old values for these statistics
-        mask = ~numerical_statistics.index.get_level_values("statistic").isin(
-            statistics_to_sum
-        )
-        result = pd.concat([numerical_statistics[mask], summed_stats])
-
-        return result
-    except Exception as e:
-        safe_log(
-            "warn", f"Error computing aggregate summable statistics: {type(e).__name__}"
-        )
-        return numerical_statistics
-
-
-def _compute_aggregate_minmax(numerical_statistics: pd.Series) -> Dict[str, float]:
-    """
-    Compute federated minimum and maximum values.
-
-    Args:
-        numerical_statistics (pd.Series): Series containing minimum and
-                                            maximum values for a column per participating organisation.
-
-    Returns:
-        Dict[str, float]: Dictionary with federated minimum and maximum values.
-    """
-    # Handle empty series safely
-    if numerical_statistics.empty:
-        return {"min": 0.0, "max": 0.0}
-
-    try:
-        minimum = numerical_statistics[
-            numerical_statistics.index.get_level_values("statistic") == "min"
-        ].min()
-        maximum = numerical_statistics[
-            numerical_statistics.index.get_level_values("statistic") == "max"
-        ].max()
-        return {"min": float(minimum), "max": float(maximum)}
-    except Exception as e:
-        safe_log("warn", f"Error computing aggregate min/max: {type(e).__name__}")
-        return {"min": 0.0, "max": 0.0}
-
-
-def _compute_aggregate_mean(numerical_statistics: pd.Series) -> float:
-    """
-    Compute federated mean.
-
-    Args:
-        numerical_statistics (pd.Series): Series containing sums and counts for a column.
-
-    Returns:
-        float: Federated mean.
-    """
-    # Handle empty series safely
-    if numerical_statistics.empty:
-        return 0.0
-
-    try:
-        variable_name = numerical_statistics.index.get_level_values(
-            "variable"
-        ).unique()[0]
-        total_sum = numerical_statistics.loc[(variable_name, "sum")].iloc[0]
-        total_count = numerical_statistics.loc[(variable_name, "count")].iloc[0]
-
-        return float(total_sum / total_count) if total_count > 0 else 0.0
-    except Exception as e:
-        safe_log("warn", f"Error computing aggregate mean: {type(e).__name__}")
-        return 0.0
-
-
-def _compute_aggregate_deviation(numerical_statistics: pd.Series) -> float:
-    """
-    Compute aggregate standard deviation.
-
-    Args:
-        numerical_statistics (pd.Series): Series containing sum of squared deviations and counts.
-
-    Returns:
-        float: Federated standard deviation.
-    """
-    # Handle empty series safely
-    if numerical_statistics.empty:
-        return 0.0
-
-    try:
-        variable_name = numerical_statistics.index.get_level_values(
-            "variable"
-        ).unique()[0]
-
-        total_sq_dev_sum = numerical_statistics.loc[(variable_name, "sq_dev_sum")].iloc[
-            0
-        ]
-        total_count = numerical_statistics.loc[(variable_name, "count")].iloc[0]
-
-        return (
-            float(np.sqrt(total_sq_dev_sum / total_count)) if total_count > 0 else 0.0
-        )
-    except Exception as e:
-        safe_log("warn", f"Error computing aggregate deviation: {type(e).__name__}")
-        return 0.0
-
-
-def _compute_aggregate_quantiles(numerical_statistics: pd.Series) -> Dict[str, float]:
-    """
-    Compute aggregate quantiles.
-
-    Args:
-        numerical_statistics (pd.Series): Series containing local quantiles and their sampling variances.
-
-    Returns:
-        Dict[str, float]: Dictionary with aggregate quantiles and their standard errors.
-    """
-    # Handle empty series safely
-    if numerical_statistics.empty:
-        return {
-            "Q1": 0.0,
-            "Q2": 0.0,
-            "Q3": 0.0,
-            "Q1_std_err": 0.0,
-            "Q2_std_err": 0.0,
-            "Q3_std_err": 0.0,
-        }
-
-    aggregate_quantiles: Dict[str, float] = {}
-
-    try:
-        for i in range(1, 4):
-            quantiles_i = numerical_statistics[
-                numerical_statistics.index.get_level_values("statistic") == f"Q{i}"
-            ].values
-            variances_i = numerical_statistics[
-                numerical_statistics.index.get_level_values("statistic")
-                == f"variance_Q{i}"
-            ].values
-
-            # Skip if no data
-            if len(quantiles_i) == 0 or len(variances_i) == 0:
-                aggregate_quantiles[f"Q{i}"] = 0.0
-                aggregate_quantiles[f"Q{i}_std_err"] = 0.0
-                continue
-
-            # Using DerSimonian and Laird method to estimate tau2
-            # Equation 8 in https://doi.org/10.1016/j.cct.2006.04.004
-            k = len(quantiles_i)
-            omega_i0 = 1.0 / np.power(variances_i, 2)
-            quantile_0 = np.sum(omega_i0 * quantiles_i) / np.sum(omega_i0)
-            tau2_nom = np.sum(omega_i0 * np.power((quantiles_i - quantile_0), 2)) - (
-                k - 1
-            )
-            tau2_den = np.sum(omega_i0) - np.sum(np.power(omega_i0, 2)) / np.sum(
-                omega_i0
-            )
-            tau2 = np.max([0, tau2_nom / tau2_den])
-
-            # Using approach from McGrath et al. (2019), section 2, see: https://doi.org/10.1002/sim.8013
-            omega_i = 1.0 / (variances_i + tau2)
-            aggregate_quantile = np.sum(quantiles_i * omega_i) / np.sum(omega_i)
-            aggregate_quantile_std_err = np.sqrt(1.0 / np.sum(omega_i))
-            aggregate_quantiles[f"Q{i}"] = float(aggregate_quantile)
-            aggregate_quantiles[f"Q{i}_std_err"] = float(aggregate_quantile_std_err)
-
-        return aggregate_quantiles
-    except Exception as e:
-        safe_log("warn", f"Error computing aggregate quantiles: {type(e).__name__}")
-        return {
-            "Q1": 0.0,
-            "Q2": 0.0,
-            "Q3": 0.0,
-            "Q1_std_err": 0.0,
-            "Q2_std_err": 0.0,
-            "Q3_std_err": 0.0,
-        }
-
-
-def _compute_aggregate_adjusted_deviation(numerical_statistics: pd.Series) -> float:
-    """
-    Compute the aggregate-adjusted deviation.
-
-    Args:
-        numerical_statistics (pd.Series): local sums of squared errors and number of rows.
-
-    Returns:
-        float: aggregate-adjusted standard deviation
-    """
-    # Handle empty series safely
-    if numerical_statistics.empty:
-        return 0.0
-
-    try:
-        local_adjusted_sum_of_squared_errors = numerical_statistics[
-            numerical_statistics.index.get_level_values("statistic")
-            == "adjusted_sum_of_squared_errors"
-        ].values
-        local_number_of_rows = numerical_statistics[
-            numerical_statistics.index.get_level_values("statistic") == "count"
-        ].values
-
-        if (
-            len(local_adjusted_sum_of_squared_errors) == 0
-            or len(local_number_of_rows) == 0
-            or np.sum(local_number_of_rows) == 0
-        ):
-            return 0.0
-
-        aggregate_deviation = np.sqrt(
-            np.sum(local_adjusted_sum_of_squared_errors) / np.sum(local_number_of_rows)
-        )
-        return float(aggregate_deviation)
-    except Exception as e:
-        safe_log(
-            "warn", f"Error computing aggregate adjusted deviation: {type(e).__name__}"
-        )
-        return 0.0
+        # When no placeholder or placeholder is pd.NA, count standard missing values (NaN, None, pd.NA)
+        missing_mask = column_values.isna()
+        na_count = int(missing_mask.sum())
+
+    return (na_count, column_values)
