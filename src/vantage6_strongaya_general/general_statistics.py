@@ -531,8 +531,8 @@ def _orchestrate_local_categorical_statistics(
             )
 
         # Calculate the missing value count safely
-        if "na" in column_stats:
-            na_count = column_stats["na"]
+        if "missing_values" in column_stats:
+            na_count = column_stats["missing_values"]
         else:
             na_count, column_values = safe_calculate(
                 _compute_local_missing_values,
@@ -595,8 +595,8 @@ def _orchestrate_local_numerical_statistics(
                 pass
 
         # Count the occurrences of missing values safely if it does not exist yet
-        if "na" in column_stats:
-            na_count = column_stats["na"]
+        if "missing_values" in column_stats:
+            na_count = column_stats["missing_values"]
         else:
             na_count, column_values = safe_calculate(
                 _compute_local_missing_values,
@@ -919,35 +919,38 @@ def _compute_local_min_max(
 
 def _compute_local_missing_values(
     column_values: pd.Series,
-    placeholder: Union[int, str, pd._libs.missing.NAType] = pd.NA,
+    placeholder: Optional[Any] = None,
     replace_with_na: bool = False,
 ) -> Tuple[int, pd.Series]:
     """
     Count the occurrences of missing values and optionally replace them with pd.NA.
 
+    When an explicit placeholder is provided (e.g. a URI notation used to denote missing
+    values in RDF-sourced data), only cells matching that placeholder are counted and
+    replaced. Structural missing values (NaN/None/pd.NA) are intentionally NOT counted
+    in that case, to avoid double-counting missing values that stem from different causes
+    (e.g. an explicit placeholder annotation versus NaN introduced by an outer join).
+    When no placeholder is provided, standard missing values (NaN/None/pd.NA) are counted.
+
     Args:
         column_values (pd.Series): The input DataFrame containing the data.
-        placeholder (Union[int, str, pd._libs.missing.NAType]): The placeholder value to identify missing values.
-        replace_with_na (bool): Whether to replace the placeholder with pd.NA.
+        placeholder (Optional[Any]): The placeholder value used to identify missing values.
+                                     If None, standard missing values (NaN/None/pd.NA) are counted instead.
+        replace_with_na (bool): Whether to replace the placeholder (or missing values) with pd.NA.
 
     Returns:
         Tuple[int, pd.Series]: The count of missing values and the updated column values.
     """
-    if isinstance(placeholder, int):
-        true_na_count = (column_values == placeholder).sum()
+    if placeholder is not None and not pd.isna(placeholder):
+        # Only count cells matching the explicit placeholder, not structural NaN values,
+        # to prevent double-counting missing values from different origins.
+        true_na_count = int(column_values.eq(placeholder).sum())
         if replace_with_na:
             column_values = column_values.replace(placeholder, pd.NA)
-    elif isinstance(placeholder, str):
-        true_na_count = column_values.eq(placeholder).sum()
-        if replace_with_na:
-            column_values = column_values.replace(placeholder, pd.NA)
-    elif isinstance(placeholder, pd._libs.missing.NAType):
-        true_na_count = column_values.isna().sum()
+    else:
+        true_na_count = int(column_values.isna().sum())
         if replace_with_na:
             column_values = column_values.where(~column_values.isna(), pd.NA)
-    else:
-        safe_log("warn", "Placeholder must be either an integer, a string, or pd.NA")
-        return 0, column_values
 
     return true_na_count, column_values
 

@@ -15,7 +15,9 @@ from vantage6_strongaya_general.general_statistics import (
     compute_aggregate_adjusted_deviation,
     compute_local_general_statistics,
     compute_local_adjusted_deviation,
+    _compute_local_missing_values,
 )
+from vantage6_strongaya_general.miscellaneous import PredeterminedInfoAccessor
 
 
 class TestComputeLocalGeneralStatistics:
@@ -505,3 +507,106 @@ class TestStatisticsIntegration:
         # Check that results are produced
         assert isinstance(aggregate_result, dict)
         assert "numerical_general_statistics" in aggregate_result
+
+
+class TestComputeLocalMissingValues:
+    """Test cases for _compute_local_missing_values function (see issue #12)."""
+
+    def test_counts_structural_nan_when_no_placeholder(self):
+        """When no placeholder is provided, standard NaN/None/pd.NA values should be counted."""
+        column_values = pd.Series([1.0, np.nan, 3.0, pd.NA, 5.0])
+
+        na_count, updated_values = _compute_local_missing_values(column_values)
+
+        assert na_count == 2
+
+    def test_counts_only_placeholder_when_provided(self):
+        """When a placeholder is provided, only cells matching the placeholder should be counted."""
+        placeholder = "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C54031"
+        column_values = pd.Series(["a", placeholder, "b", placeholder, "c"])
+
+        na_count, updated_values = _compute_local_missing_values(
+            column_values, placeholder=placeholder
+        )
+
+        assert na_count == 2
+
+    def test_does_not_double_count_placeholder_and_structural_nan(self):
+        """Structural NaN (e.g. from an outer join) must NOT be added on top of placeholder matches.
+
+        This reproduces the scenario from https://github.com/STRONGAYA/v6-tools-general/issues/12,
+        where RDF data contains both an explicit placeholder for missing values and structural
+        NaN values introduced by outer-merging tables of different sizes.
+        """
+        placeholder = "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C54031"
+        # 2 explicit placeholder annotations + 2 structural NaN values from an outer merge
+        column_values = pd.Series(["a", placeholder, np.nan, placeholder, np.nan, "b"])
+
+        na_count, updated_values = _compute_local_missing_values(
+            column_values, placeholder=placeholder
+        )
+
+        # Only the explicit placeholder matches should be counted, not the structural NaN values
+        assert na_count == 2
+
+    def test_replace_with_na_replaces_only_placeholder(self):
+        """When replace_with_na is True and a placeholder is given, only placeholder cells are replaced."""
+        placeholder = "MISSING"
+        column_values = pd.Series(["a", placeholder, np.nan, "b"])
+
+        na_count, updated_values = _compute_local_missing_values(
+            column_values, placeholder=placeholder, replace_with_na=True
+        )
+
+        assert na_count == 1
+        assert updated_values.isna().sum() == 2  # original NaN + replaced placeholder
+
+
+class TestPredeterminedMissingValuesLookup:
+    """Test cases confirming the precomputed 'missing_values' stat (see issue #12) is actually reused.
+
+    Downstream libraries (e.g. v6-tools-rdf) store the precomputed missing-value count under the
+    'missing_values' key via the predetermined_info accessor. Previously, compute_local_general_statistics
+    looked this up under the wrong key ('na'), so the stored value was never found and the missing count
+    was silently recomputed from scratch instead of being reused.
+    """
+
+    def test_categorical_statistics_reuse_predetermined_missing_values(self):
+        """The categorical orchestration should use the precomputed 'missing_values' stat when present."""
+        df = pd.DataFrame({"cat_var": pd.Categorical(["a", "b", None, "a"])})
+
+        # Store a deliberately distinct value from the actual NaN count (1) to prove it is being reused
+        df.predetermined_info.add_stat(
+            "missing_values", value={"cat_var": 42}, per_column=True
+        )
+
+        result = compute_local_general_statistics(df)
+        categorical_df = pd.read_json(
+            StringIO(result["categorical_general_partial_statistics"])
+        )
+
+        na_row = categorical_df[
+            (categorical_df["variable"] == "cat_var")
+            & (categorical_df["value"] == "na")
+        ]
+        assert na_row["count"].iloc[0] == 42
+
+    def test_numerical_statistics_reuse_predetermined_missing_values(self):
+        """The numerical orchestration should use the precomputed 'missing_values' stat when present."""
+        df = pd.DataFrame({"num_var": [1.0, 2.0, np.nan, 4.0]})
+
+        # Store a deliberately distinct value from the actual NaN count (1) to prove it is being reused
+        df.predetermined_info.add_stat(
+            "missing_values", value={"num_var": 42}, per_column=True
+        )
+
+        result = compute_local_general_statistics(df)
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
+
+        na_row = numerical_df[
+            (numerical_df["variable"] == "num_var")
+            & (numerical_df["statistic"] == "na")
+        ]
+        assert na_row["value"].iloc[0] == 42
