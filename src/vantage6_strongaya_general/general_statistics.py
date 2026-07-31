@@ -821,6 +821,39 @@ def _orchestrate_local_adjusted_deviation(
     return adjusted_deviation_df
 
 
+def _compute_local_missing_values(
+    column_values: pd.Series,
+    placeholder: Union[int, str, pd._libs.missing.NAType] = pd.NA,
+    replace_with_na: bool = False,
+) -> Tuple[int, pd.Series]:
+    """
+    Compute the number of missing values in a column.
+    
+    This function handles the MISSING_DATA_NOTATION environment variable by using
+    URI notation (e.g., http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C54031)
+    as placeholder values for missing data in RDF tables.
+    
+    Args:
+        column_values (pd.Series): A Series with the column values to compute missing values for.
+        placeholder (Union[int, str, pd._libs.missing.NAType]): The placeholder value to identify as missing.
+            Defaults to pd.NA. Can be set to a URI string via MISSING_DATA_NOTATION environment variable.
+        replace_with_na (bool): Whether to replace placeholder values with pd.NA.
+
+    Returns:
+        Tuple[int, pd.Series]: The count of missing values and the updated column values.
+    """
+    if placeholder is not pd.NA:
+        missing_mask = column_values == placeholder
+        na_count = int(missing_mask.sum())
+        if replace_with_na:
+            column_values = column_values.replace(placeholder, pd.NA)
+    else:
+        missing_mask = column_values.isna()
+        na_count = int(missing_mask.sum())
+    return (na_count, column_values)
+
+
+
 def _compute_local_inliers_and_outliers(
     column_values: pd.Series, inliers: List[Any], datatype: Optional[str] = None
 ) -> Tuple[pd.Series, pd.Series]:
@@ -852,42 +885,3 @@ tional[str]): The datatype of the variable ("categorical" or "numerical").
         inliers_series = column_values[column_values.index
 
 ... [Content truncated]
-
-
-def _compute_local_missing_values(
-    column_values: pd.Series,
-    placeholder: Union[int, str, pd._libs.missing.NAType] = pd.NA,
-    replace_with_na: bool = False,
-) -> Tuple[int, pd.Series]:
-    """
-    Compute the count of missing values in a column.
-
-    When a placeholder is provided (and not pd.NA), only counts cells matching that placeholder value.
-    This prevents double-counting when structural NaN values exist alongside explicit placeholder 
-    annotations (e.g., in RDF data with MISSING_DATA_NOTATION).
-
-    Args:
-        column_values (pd.Series): The pandas Series to check for missing values
-        placeholder (Union[int, str, pd._libs.missing.NAType]): The placeholder value to identify missing values.
-            When set to pd.NA (default), counts standard missing values (NaN, None, pd.NA).
-            When set to a specific value, counts only cells matching that value.
-        replace_with_na (bool): If True, replace the counted values with pd.NA
-
-    Returns:
-        Tuple[int, pd.Series]: Tuple of (missing_count, modified_column_values)
-    """
-    if placeholder is not pd.NA:
-        # When a specific placeholder is provided, only count cells matching that placeholder
-        # This is for RDF contexts where missing values are explicitly annotated
-        missing_mask = column_values == placeholder
-        na_count = int(missing_mask.sum())
-        
-        # Replace placeholder with NA if requested
-        if replace_with_na:
-            column_values = column_values.replace(placeholder, pd.NA)
-    else:
-        # When no placeholder or placeholder is pd.NA, count standard missing values (NaN, None, pd.NA)
-        missing_mask = column_values.isna()
-        na_count = int(missing_mask.sum())
-
-    return (na_count, column_values)
