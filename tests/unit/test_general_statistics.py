@@ -17,7 +17,6 @@ from vantage6_strongaya_general.general_statistics import (
     compute_local_adjusted_deviation,
     _compute_local_missing_values,
 )
-from vantage6_strongaya_general.miscellaneous import PredeterminedInfoAccessor
 
 
 class TestComputeLocalGeneralStatistics:
