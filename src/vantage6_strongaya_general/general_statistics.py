@@ -821,39 +821,6 @@ def _orchestrate_local_adjusted_deviation(
     return adjusted_deviation_df
 
 
-def _compute_local_missing_values(
-    column_values: pd.Series,
-    placeholder: Union[int, str, pd._libs.missing.NAType] = pd.NA,
-    replace_with_na: bool = False,
-) -> Tuple[int, pd.Series]:
-    """
-    Compute the number of missing values in a column.
-    
-    This function handles the MISSING_DATA_NOTATION environment variable by using
-    URI notation (e.g., http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C54031)
-    as placeholder values for missing data in RDF tables.
-    
-    Args:
-        column_values (pd.Series): A Series with the column values to compute missing values for.
-        placeholder (Union[int, str, pd._libs.missing.NAType]): The placeholder value to identify as missing.
-            Defaults to pd.NA. Can be set to a URI string via MISSING_DATA_NOTATION environment variable.
-        replace_with_na (bool): Whether to replace placeholder values with pd.NA.
-
-    Returns:
-        Tuple[int, pd.Series]: The count of missing values and the updated column values.
-    """
-    if placeholder is not pd.NA:
-        missing_mask = column_values == placeholder
-        na_count = int(missing_mask.sum())
-        if replace_with_na:
-            column_values = column_values.replace(placeholder, pd.NA)
-    else:
-        missing_mask = column_values.isna()
-        na_count = int(missing_mask.sum())
-    return (na_count, column_values)
-
-
-
 def _compute_local_inliers_and_outliers(
     column_values: pd.Series, inliers: List[Any], datatype: Optional[str] = None
 ) -> Tuple[pd.Series, pd.Series]:
