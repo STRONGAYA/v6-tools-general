@@ -48,8 +48,7 @@ def compute_aggregate_general_statistics(
 
                 # Avoid concatenating empty DataFrames
                 if aggregate_categorical_df.empty:
-                    aggregate_categ
-orical_df = categorical_df
+                    aggregate_categorical_df = categorical_df
                 else:
                     aggregate_categorical_df = pd.concat(
                         [aggregate_categorical_df, categorical_df]
@@ -101,8 +100,7 @@ orical_df = categorical_df
         }
 
 
-def c
-ompute_aggregate_adjusted_deviation(
+def compute_aggregate_adjusted_deviation(
     results_adjusted_deviation: List[Dict[str, Any]],
     results_general_statistics: Optional[Dict[str, str]] = None,
     return_partials: bool = False,
@@ -146,8 +144,7 @@ ompute_aggregate_adjusted_deviation(
     aggregate_deviation_df = safe_calculate(
         _orchestrate_aggregate_adjusted_deviation,
         pd.DataFrame(columns=["variable", "statistic", "value"]),
-        df=aggrega
-te_deviation_df,
+        df=aggregate_deviation_df,
     )
 
     # Merge the aggregate-adjusted deviation with the general statistics
@@ -196,7 +193,6 @@ def compute_local_general_statistics(
     ]
     numerical_columns = [
         col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])
-
     ]
 
     # Process categorical variables if any exist
@@ -251,8 +247,7 @@ def compute_local_adjusted_deviation(
 
     if not variables_to_analyse:
         # Initialise an empty DataFrame to return
-        adjusted_deviation = pd.DataFrame(columns=["variable", "st
-atistic", "value"])
+        adjusted_deviation = pd.DataFrame(columns=["variable", "statistic", "value"])
 
         safe_log(
             "warn",
@@ -311,8 +306,7 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
             try:
                 variable_stats = df.predetermined_info.get_column_stats(variable)
             except InputError:
-     
-           pass
+                pass
 
         # Compute summable statistics if they do not exist yet
         if "summable_statistics" in variable_stats:
@@ -362,8 +356,7 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
             mean = safe_calculate(
                 _compute_aggregate_mean,
                 0.0,
-                numerical_statistics=column
-_statistics_series,
+                numerical_statistics=column_statistics_series,
             )
 
         # Calculate standard deviation safely if it does not exist yet
@@ -419,8 +412,7 @@ def _orchestrate_aggregate_adjusted_deviation(df: pd.DataFrame) -> pd.DataFrame:
     Process and aggregate adjusted deviations for each variable.
 
     Args:
-        df (pd.DataFrame): DataFrame with columns "variable", "stat
-istic", and "value"
+        df (pd.DataFrame): DataFrame with columns "variable", "statistic", and "value"
 
     Returns:
         pd.DataFrame: Aggregated DataFrame with adjusted standard deviations
@@ -474,8 +466,7 @@ def _orchestrate_local_categorical_statistics(
     removes outliers based on the provided inliers list, and returns a DataFrame
     with the value counts and outliers for each categorical variable.
 
-    Computation of given statistics can be skipped if they are already pres
-ent in the predetermined_info
+    Computation of given statistics can be skipped if they are already present in the predetermined_info
     attribute that can be generated through the miscellaneous module.
     Ensure that statistics that should be skipped can be found through the keys used in this function.
 
@@ -523,8 +514,7 @@ ent in the predetermined_info
             inliers = variable_details[column_name].get("inliers", None)
             datatype = variable_details[column_name].get("datatype", "categorical")
         else:
-            inliers
- = None
+            inliers = None
             datatype = "categorical"
 
         # Get the inliers and outliers safely
@@ -573,8 +563,7 @@ def _orchestrate_local_numerical_statistics(
 
     Computation of given statistics can be skipped if they are already present in the predetermined_info
     attribute that can be generated through the miscellaneous module.
-    Ensure that stat
-istics that should be skipped can be found through the keys used in this function.
+    Ensure that statistics that should be skipped can be found through the keys used in this function.
 
     Args:
         df (pd.DataFrame): The input DataFrame containing the data.
@@ -623,8 +612,7 @@ istics that should be skipped can be found through the keys used in this functio
             )
             datatype = variable_details[column_name].get("datatype", "numerical")
         else:
-       
-     inliers_range = [float("-inf"), float("inf")]
+            inliers_range = [float("-inf"), float("inf")]
             datatype = "numerical"
 
         # Identify outliers by excluding values outside the inliers range safely if they do not exist yet
@@ -672,8 +660,7 @@ istics that should be skipped can be found through the keys used in this functio
         if "quantiles" in column_stats:
             quantiles = column_stats["quantiles"]
         else:
-            quantiles = safe_calc
-ulate(
+            quantiles = safe_calculate(
                 _compute_local_quantiles,
                 {
                     "Q1": 0.0,
@@ -723,8 +710,7 @@ ulate(
                     "std",
                     np.sqrt(sum_errors2 / number_of_rows if number_of_rows > 0 else 1),
                 ),
-   
-             (column_name, "outliers", int(len(outliers_series))),
+                (column_name, "outliers", int(len(outliers_series))),
             ]
         )
 
@@ -778,8 +764,7 @@ def _orchestrate_local_adjusted_deviation(
         # Get the inliers for the column from the provided dictionary
         if variable_details is not None and column_name in variable_details:
             inliers_range = variable_details[column_name].get(
-             
-   "inliers", [float("-inf"), float("inf")]
+                "inliers", [float("-inf"), float("inf")]
             )
             datatype = variable_details[column_name].get("datatype", "numerical")
         else:
@@ -831,8 +816,7 @@ def _compute_local_inliers_and_outliers(
         column_values (pd.Series): A Series with the column values to compute the inliers and outliers for.
         inliers (List[Any]): A list of inliers for the categorical variable or
                                 a list of inliers range for numerical variables.
-        datatype (Op
-tional[str]): The datatype of the variable ("categorical" or "numerical").
+        datatype (Optional[str]): The datatype of the variable ("categorical" or "numerical").
 
     Returns:
         Tuple[pd.Series, pd.Series]: A tuple containing two Series, one for inliers and one for outliers.
@@ -849,7 +833,8 @@ tional[str]): The datatype of the variable ("categorical" or "numerical").
         datatype is None and isinstance(column_values.dtype, pd.CategoricalDtype)
     ):
         # Categorical variable - inliers is a list of allowed values
-        inliers_series = column_values[column_values.index
+        inliers_series = column_values[column_values.index.isin(inliers)]
+
 
 ... [Content truncated]
 
