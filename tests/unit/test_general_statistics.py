@@ -206,7 +206,9 @@ class TestComputeLocalGeneralStatistics:
         """Test local quantile failure is isolated to quantile statistics for that variable."""
         df = pd.DataFrame({"ok": [1.0, 2.0, 3.0, 4.0], "failing": [5.0, 6.0, 7.0, 8.0]})
 
-        original_compute_local_quantiles = general_statistics_module._compute_local_quantiles
+        original_compute_local_quantiles = (
+            general_statistics_module._compute_local_quantiles
+        )
 
         def _raise_for_specific_variable(column_values, iterations=1000):
             if column_values.name == "failing":
@@ -220,7 +222,9 @@ class TestComputeLocalGeneralStatistics:
         )
 
         result = compute_local_general_statistics(df)
-        numerical_df = pd.read_json(StringIO(result["numerical_general_partial_statistics"]))
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
 
         ok_stats = set(
             numerical_df[numerical_df["variable"] == "ok"]["statistic"].tolist()
@@ -232,9 +236,14 @@ class TestComputeLocalGeneralStatistics:
         assert {"Q1", "Q2", "Q3", "variance_Q1", "variance_Q2", "variance_Q3"}.issubset(
             ok_stats
         )
-        assert {"Q1", "Q2", "Q3", "variance_Q1", "variance_Q2", "variance_Q3"}.isdisjoint(
-            failing_stats
-        )
+        assert {
+            "Q1",
+            "Q2",
+            "Q3",
+            "variance_Q1",
+            "variance_Q2",
+            "variance_Q3",
+        }.isdisjoint(failing_stats)
         assert {
             "min",
             "max",
@@ -311,8 +320,12 @@ class TestComputeAggregateGeneralStatistics:
         self, monkeypatch
     ):
         """Test aggregate quantile failure is isolated to one variable."""
-        org1_data = pd.DataFrame({"ok": [1.0, 2.0, 3.0, 4.0], "failing": [10.0, 20.0, 30.0, 40.0]})
-        org2_data = pd.DataFrame({"ok": [2.0, 3.0, 4.0, 5.0], "failing": [15.0, 25.0, 35.0, 45.0]})
+        org1_data = pd.DataFrame(
+            {"ok": [1.0, 2.0, 3.0, 4.0], "failing": [10.0, 20.0, 30.0, 40.0]}
+        )
+        org2_data = pd.DataFrame(
+            {"ok": [2.0, 3.0, 4.0, 5.0], "failing": [15.0, 25.0, 35.0, 45.0]}
+        )
 
         local_result1 = compute_local_general_statistics(org1_data)
         local_result2 = compute_local_general_statistics(org2_data)
@@ -322,7 +335,9 @@ class TestComputeAggregateGeneralStatistics:
         )
 
         def _raise_for_specific_variable(numerical_statistics):
-            variable = numerical_statistics.index.get_level_values("variable").unique()[0]
+            variable = numerical_statistics.index.get_level_values("variable").unique()[
+                0
+            ]
             if variable == "failing":
                 raise RuntimeError("forced aggregate quantile failure")
             return original_compute_aggregate_quantiles(numerical_statistics)
@@ -336,7 +351,9 @@ class TestComputeAggregateGeneralStatistics:
         aggregated_result = compute_aggregate_general_statistics(
             [local_result1, local_result2]
         )
-        numerical_df = pd.read_json(StringIO(aggregated_result["numerical_general_statistics"]))
+        numerical_df = pd.read_json(
+            StringIO(aggregated_result["numerical_general_statistics"])
+        )
 
         ok_stats = set(
             numerical_df[numerical_df["variable"] == "ok"]["statistic"].tolist()
@@ -362,7 +379,9 @@ class TestComputeAggregateGeneralStatistics:
             [local_result1, local_result2]
         )
 
-        numerical_df = pd.read_json(StringIO(aggregated_result["numerical_general_statistics"]))
+        numerical_df = pd.read_json(
+            StringIO(aggregated_result["numerical_general_statistics"])
+        )
         value_stats = set(
             numerical_df[numerical_df["variable"] == "value"]["statistic"].tolist()
         )

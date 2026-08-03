@@ -311,7 +311,9 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
 
             # Compute summable statistics if they do not exist yet
             if "summable_statistics" in variable_stats:
-                column_statistics_series = pd.Series(variable_stats["summable_statistics"])
+                column_statistics_series = pd.Series(
+                    variable_stats["summable_statistics"]
+                )
             else:
                 column_statistics_series = safe_calculate(
                     _compute_aggregate_summable_statistics,
@@ -380,7 +382,10 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
                 ("max", float(min_max_values["max"])),
                 ("mean", float(mean)),
                 ("std", float(std)),
-                ("count", float(column_statistics_series.loc[(variable, "count")].iloc[0])),
+                (
+                    "count",
+                    float(column_statistics_series.loc[(variable, "count")].iloc[0]),
+                ),
                 (
                     "outliers",
                     float(column_statistics_series.loc[(variable, "outliers")].iloc[0]),
