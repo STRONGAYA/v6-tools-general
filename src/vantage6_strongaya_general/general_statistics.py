@@ -1390,7 +1390,7 @@ def _compute_aggregate_quantiles(numerical_statistics: pd.Series) -> Dict[str, f
             )
 
             # Guard against division by zero or invalid tau2
-            if tau2_den == 0 or not np.isfinite(tau2_den):
+            if np.isclose(tau2_den, 0) or not np.isfinite(tau2_den):
                 tau2 = 0.0
             else:
                 tau2 = np.max([0, tau2_nom / tau2_den])

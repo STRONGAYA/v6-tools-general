@@ -751,6 +751,8 @@ class TestComputeAggregateAdjustedDeviation:
         # failing_var should NOT have adjusted std but should still have general stats
         assert "adjusted std" not in failing_stats
         assert {"min", "max", "count"}.issubset(failing_stats)
+
+
 class TestStatisticsIntegration:
     """Integration tests for statistics functions working together."""
 
