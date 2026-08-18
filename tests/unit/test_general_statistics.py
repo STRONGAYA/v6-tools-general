@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 import json
+import vantage6_strongaya_general.general_statistics as general_statistics_module
 
 from vantage6_strongaya_general.general_statistics import (
     compute_aggregate_general_statistics,
@@ -200,6 +201,62 @@ class TestComputeLocalGeneralStatistics:
         assert valid_stats_dict["count"] == 10
         assert valid_stats_dict["mean"] == 5.5
 
+    def test_quantile_failure_excludes_only_quantile_statistics_for_one_variable(
+        self, monkeypatch
+    ):
+        """Test local quantile failure is isolated to quantile statistics for that variable."""
+        df = pd.DataFrame({"ok": [1.0, 2.0, 3.0, 4.0], "failing": [5.0, 6.0, 7.0, 8.0]})
+
+        original_compute_local_quantiles = (
+            general_statistics_module._compute_local_quantiles
+        )
+
+        def _raise_for_specific_variable(column_values, iterations=1000):
+            if column_values.name == "failing":
+                raise RuntimeError("forced quantile failure")
+            return original_compute_local_quantiles(column_values, iterations)
+
+        monkeypatch.setattr(
+            general_statistics_module,
+            "_compute_local_quantiles",
+            _raise_for_specific_variable,
+        )
+
+        result = compute_local_general_statistics(df)
+        numerical_df = pd.read_json(
+            StringIO(result["numerical_general_partial_statistics"])
+        )
+
+        ok_stats = set(
+            numerical_df[numerical_df["variable"] == "ok"]["statistic"].tolist()
+        )
+        failing_stats = set(
+            numerical_df[numerical_df["variable"] == "failing"]["statistic"].tolist()
+        )
+
+        assert {"Q1", "Q2", "Q3", "variance_Q1", "variance_Q2", "variance_Q3"}.issubset(
+            ok_stats
+        )
+        assert {
+            "Q1",
+            "Q2",
+            "Q3",
+            "variance_Q1",
+            "variance_Q2",
+            "variance_Q3",
+        }.isdisjoint(failing_stats)
+        assert {
+            "min",
+            "max",
+            "mean",
+            "std",
+            "count",
+            "outliers",
+            "na",
+            "sum",
+            "sq_dev_sum",
+        }.issubset(failing_stats)
+
 
 class TestComputeAggregateGeneralStatistics:
     """Test cases for compute_aggregate_general_statistics function."""
@@ -259,8 +316,182 @@ class TestComputeAggregateGeneralStatistics:
 
         # Should return empty but properly structured result
         assert isinstance(aggregate_result, dict)
-        assert "numerical_general_statistics" in aggregate_result
-        assert "categorical_general_statistics" in aggregate_result
+
+    def test_aggregate_quantile_failure_excludes_only_quantile_statistics_for_one_variable(
+        self, monkeypatch
+    ):
+        """Test aggregate quantile failure is isolated to one variable."""
+        org1_data = pd.DataFrame(
+            {"ok": [1.0, 2.0, 3.0, 4.0], "failing": [10.0, 20.0, 30.0, 40.0]}
+        )
+        org2_data = pd.DataFrame(
+            {"ok": [2.0, 3.0, 4.0, 5.0], "failing": [15.0, 25.0, 35.0, 45.0]}
+        )
+
+        local_result1 = compute_local_general_statistics(org1_data)
+        local_result2 = compute_local_general_statistics(org2_data)
+
+        original_compute_aggregate_quantiles = (
+            general_statistics_module._compute_aggregate_quantiles
+        )
+
+        def _raise_for_specific_variable(numerical_statistics):
+            variable = numerical_statistics.index.get_level_values("variable").unique()[
+                0
+            ]
+            if variable == "failing":
+                raise RuntimeError("forced aggregate quantile failure")
+            return original_compute_aggregate_quantiles(numerical_statistics)
+
+        monkeypatch.setattr(
+            general_statistics_module,
+            "_compute_aggregate_quantiles",
+            _raise_for_specific_variable,
+        )
+
+        aggregated_result = compute_aggregate_general_statistics(
+            [local_result1, local_result2]
+        )
+        numerical_df = pd.read_json(
+            StringIO(aggregated_result["numerical_general_statistics"])
+        )
+
+        ok_stats = set(
+            numerical_df[numerical_df["variable"] == "ok"]["statistic"].tolist()
+        )
+        failing_stats = set(
+            numerical_df[numerical_df["variable"] == "failing"]["statistic"].tolist()
+        )
+
+        assert {"q1", "median", "q3"}.issubset(ok_stats)
+        assert {"q1", "median", "q3"}.isdisjoint(failing_stats)
+        assert {"min", "max", "mean", "std", "count", "outliers", "na"}.issubset(
+            failing_stats
+        )
+
+    def test_aggregate_quantile_statistics_present_when_computation_succeeds(self):
+        """Test aggregate quantile statistics are still present in normal execution."""
+        org1_data = pd.DataFrame({"value": [1.0, 2.0, 3.0, 4.0]})
+        org2_data = pd.DataFrame({"value": [2.0, 3.0, 4.0, 5.0]})
+
+        local_result1 = compute_local_general_statistics(org1_data)
+        local_result2 = compute_local_general_statistics(org2_data)
+        aggregated_result = compute_aggregate_general_statistics(
+            [local_result1, local_result2]
+        )
+
+        numerical_df = pd.read_json(
+            StringIO(aggregated_result["numerical_general_statistics"])
+        )
+        value_stats = set(
+            numerical_df[numerical_df["variable"] == "value"]["statistic"].tolist()
+        )
+
+        assert {"q1", "median", "q3"}.issubset(value_stats)
+        assert "numerical_general_statistics" in aggregated_result
+        assert "categorical_general_statistics" in aggregated_result
+
+    def test_aggregate_mean_failure_excludes_only_mean_for_affected_variable(
+        self, monkeypatch
+    ):
+        """One variable's mean failure does not affect others."""
+        org1_data = pd.DataFrame(
+            {"ok": [1.0, 2.0, 3.0, 4.0], "failing": [10.0, 20.0, 30.0, 40.0]}
+        )
+        org2_data = pd.DataFrame(
+            {"ok": [2.0, 3.0, 4.0, 5.0], "failing": [15.0, 25.0, 35.0, 45.0]}
+        )
+
+        local_result1 = compute_local_general_statistics(org1_data)
+        local_result2 = compute_local_general_statistics(org2_data)
+
+        original_compute_aggregate_mean = (
+            general_statistics_module._compute_aggregate_mean
+        )
+
+        def _raise_for_failing(numerical_statistics):
+            variable = numerical_statistics.index.get_level_values("variable").unique()[
+                0
+            ]
+            if variable == "failing":
+                raise RuntimeError("forced mean failure")
+            return original_compute_aggregate_mean(numerical_statistics)
+
+        monkeypatch.setattr(
+            general_statistics_module,
+            "_compute_aggregate_mean",
+            _raise_for_failing,
+        )
+
+        aggregated_result = compute_aggregate_general_statistics(
+            [local_result1, local_result2]
+        )
+        numerical_df = pd.read_json(
+            StringIO(aggregated_result["numerical_general_statistics"])
+        )
+
+        ok_stats = set(
+            numerical_df[numerical_df["variable"] == "ok"]["statistic"].tolist()
+        )
+        failing_stats = set(
+            numerical_df[numerical_df["variable"] == "failing"]["statistic"].tolist()
+        )
+
+        # ok variable should have mean
+        assert "mean" in ok_stats
+        # failing variable should NOT have mean but should have everything else
+        assert "mean" not in failing_stats
+        assert {"min", "max", "std", "count", "outliers", "na"}.issubset(failing_stats)
+
+    def test_aggregate_deviation_failure_excludes_only_std_for_affected_variable(
+        self, monkeypatch
+    ):
+        """One variable's deviation failure does not affect others."""
+        org1_data = pd.DataFrame(
+            {"ok": [1.0, 2.0, 3.0, 4.0], "failing": [10.0, 20.0, 30.0, 40.0]}
+        )
+        org2_data = pd.DataFrame(
+            {"ok": [2.0, 3.0, 4.0, 5.0], "failing": [15.0, 25.0, 35.0, 45.0]}
+        )
+
+        local_result1 = compute_local_general_statistics(org1_data)
+        local_result2 = compute_local_general_statistics(org2_data)
+
+        original_compute_aggregate_deviation = (
+            general_statistics_module._compute_aggregate_deviation
+        )
+
+        def _raise_for_failing(numerical_statistics):
+            variable = numerical_statistics.index.get_level_values("variable").unique()[
+                0
+            ]
+            if variable == "failing":
+                raise RuntimeError("forced deviation failure")
+            return original_compute_aggregate_deviation(numerical_statistics)
+
+        monkeypatch.setattr(
+            general_statistics_module,
+            "_compute_aggregate_deviation",
+            _raise_for_failing,
+        )
+
+        aggregated_result = compute_aggregate_general_statistics(
+            [local_result1, local_result2]
+        )
+        numerical_df = pd.read_json(
+            StringIO(aggregated_result["numerical_general_statistics"])
+        )
+
+        ok_stats = set(
+            numerical_df[numerical_df["variable"] == "ok"]["statistic"].tolist()
+        )
+        failing_stats = set(
+            numerical_df[numerical_df["variable"] == "failing"]["statistic"].tolist()
+        )
+
+        assert "std" in ok_stats
+        assert "std" not in failing_stats
+        assert {"min", "max", "mean", "count", "outliers", "na"}.issubset(failing_stats)
 
     def test_single_organisation_result(self):
         """Test aggregation with results from single organisation."""
@@ -446,6 +677,77 @@ class TestComputeAggregateAdjustedDeviation:
         aggregate_result = compute_aggregate_adjusted_deviation([local_result])
 
         assert isinstance(aggregate_result, dict)
+
+    def test_adjusted_deviation_failure_isolated_per_variable(self, monkeypatch):
+        """One variable failing adjusted deviation does not affect others."""
+        np.random.seed(42)
+
+        org1_data = pd.DataFrame(
+            {
+                "ok_var": np.random.normal(25, 5, 100),
+                "failing_var": np.random.normal(30, 8, 100),
+            }
+        )
+        org2_data = pd.DataFrame(
+            {
+                "ok_var": np.random.normal(26, 5, 120),
+                "failing_var": np.random.normal(31, 8, 120),
+            }
+        )
+
+        global_stats = """{
+            "variable": {"0": "ok_var", "1": "ok_var", "2": "failing_var", "3": "failing_var"},
+            "statistic": {"0": "mean", "1": "std", "2": "mean", "3": "std"},
+            "value": {"0": 25.5, "1": 5.0, "2": 30.5, "3": 8.0}
+        }"""
+
+        local_result1 = compute_local_adjusted_deviation(org1_data, global_stats)
+        local_result2 = compute_local_adjusted_deviation(org2_data, global_stats)
+
+        # Also need general statistics for the merge
+        local_gen1 = compute_local_general_statistics(org1_data)
+        local_gen2 = compute_local_general_statistics(org2_data)
+        gen_stats = compute_aggregate_general_statistics([local_gen1, local_gen2])
+
+        original_fn = general_statistics_module._compute_aggregate_adjusted_deviation
+
+        def _raise_for_failing(numerical_statistics):
+            variable = numerical_statistics.index.get_level_values("variable").unique()[
+                0
+            ]
+            if variable == "failing_var":
+                raise RuntimeError("forced adjusted deviation failure")
+            return original_fn(numerical_statistics)
+
+        monkeypatch.setattr(
+            general_statistics_module,
+            "_compute_aggregate_adjusted_deviation",
+            _raise_for_failing,
+        )
+
+        aggregate_result = compute_aggregate_adjusted_deviation(
+            [local_result1, local_result2],
+            results_general_statistics=gen_stats,
+        )
+
+        numerical_df = pd.read_json(
+            StringIO(aggregate_result["numerical_general_statistics"])
+        )
+
+        ok_stats = set(
+            numerical_df[numerical_df["variable"] == "ok_var"]["statistic"].tolist()
+        )
+        failing_stats = set(
+            numerical_df[numerical_df["variable"] == "failing_var"][
+                "statistic"
+            ].tolist()
+        )
+
+        # ok_var should have adjusted std
+        assert "adjusted std" in ok_stats
+        # failing_var should NOT have adjusted std but should still have general stats
+        assert "adjusted std" not in failing_stats
+        assert {"min", "max", "count"}.issubset(failing_stats)
 
 
 class TestStatisticsIntegration:

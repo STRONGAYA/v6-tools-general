@@ -292,117 +292,146 @@ def _orchestrate_aggregate_numerical_statistics(df: pd.DataFrame) -> pd.DataFram
     has_predetermined_info = hasattr(df, "predetermined_info")
 
     for variable in df["variable"].unique():
-        # Filter the DataFrame for the current variable
-        column_statistics = df[df["variable"] == variable]
+        try:
+            # Filter the DataFrame for the current variable
+            column_statistics = df[df["variable"] == variable]
 
-        # Sort index to prevent performance warning
-        column_statistics_series = column_statistics.set_index(
-            ["variable", "statistic"]
-        )["value"].sort_index()
+            # Sort index to prevent performance warning
+            column_statistics_series = column_statistics.set_index(
+                ["variable", "statistic"]
+            )["value"].sort_index()
 
-        # Get all predetermined stats for this column if available
-        variable_stats = {}
-        if has_predetermined_info:
+            # Get all predetermined stats for this column if available
+            variable_stats = {}
+            if has_predetermined_info:
+                try:
+                    variable_stats = df.predetermined_info.get_column_stats(variable)
+                except InputError:
+                    pass
+
+            # Compute summable statistics if they do not exist yet
+            if "summable_statistics" in variable_stats:
+                column_statistics_series = pd.Series(
+                    variable_stats["summable_statistics"]
+                )
+            else:
+                column_statistics_series = safe_calculate(
+                    _compute_aggregate_summable_statistics,
+                    column_statistics_series,
+                    numerical_statistics=column_statistics_series,
+                    statistics_to_sum=["sum", "count", "outliers", "na", "sq_dev_sum"],
+                )
+
+            # Sort index for performance
+            column_statistics_series = column_statistics_series.sort_index()
+
+            # Calculate aggregate statistics safely if they do not exist yet
+            if "min_max_values" in variable_stats:
+                min_max_values = pd.Series(variable_stats["min_max_values"])
+            else:
+                min_max_values = safe_calculate(
+                    _compute_aggregate_minmax,
+                    {"min": 0.0, "max": 0.0},
+                    numerical_statistics=column_statistics_series,
+                )
+
+            quantile_statistics = []
             try:
-                variable_stats = df.predetermined_info.get_column_stats(variable)
-            except InputError:
-                pass
+                if "federated_quantiles" in variable_stats:
+                    federated_quantiles = variable_stats["federated_quantiles"]
+                else:
+                    federated_quantiles = _compute_aggregate_quantiles(
+                        numerical_statistics=column_statistics_series
+                    )
 
-        # Compute summable statistics if they do not exist yet
-        if "summable_statistics" in variable_stats:
-            column_statistics_series = pd.Series(variable_stats["summable_statistics"])
-        else:
-            column_statistics_series = safe_calculate(
-                _compute_aggregate_summable_statistics,
-                column_statistics_series,
-                numerical_statistics=column_statistics_series,
-                statistics_to_sum=["sum", "count", "outliers", "na", "sq_dev_sum"],
-            )
+                quantile_statistics = [
+                    ("q1", float(federated_quantiles["Q1"])),
+                    ("median", float(federated_quantiles["Q2"])),
+                    ("q3", float(federated_quantiles["Q3"])),
+                ]
+            except Exception:
+                safe_log(
+                    "warn",
+                    "Aggregate quantiles computation failed for variable {variables}; "
+                    "excluding q1, median, and q3. Partial stats emitted.",
+                    variables=[variable],
+                )
 
-        # Sort index for performance
-        column_statistics_series = column_statistics_series.sort_index()
+            # Calculate mean safely, isolated so one variable's failure
+            # does not affect others
+            mean_statistics = []
+            try:
+                if "mean" in variable_stats:
+                    mean = variable_stats["mean"]
+                else:
+                    mean = _compute_aggregate_mean(
+                        numerical_statistics=column_statistics_series,
+                    )
+                mean_statistics = [("mean", float(mean))]
+            except Exception:
+                safe_log(
+                    "warn",
+                    "Aggregate mean computation failed for variable {variables}; "
+                    "excluding mean. Partial stats emitted.",
+                    variables=[variable],
+                )
 
-        # Calculate aggregate statistics safely if they do not exist yet
-        if "min_max_values" in variable_stats:
-            min_max_values = pd.Series(variable_stats["min_max_values"])
-        else:
-            min_max_values = safe_calculate(
-                _compute_aggregate_minmax,
-                {"min": 0.0, "max": 0.0},
-                numerical_statistics=column_statistics_series,
-            )
+            # Calculate standard deviation safely, isolated per variable
+            std_statistics = []
+            try:
+                if "std" in variable_stats:
+                    std = variable_stats["std"]
+                else:
+                    std = _compute_aggregate_deviation(
+                        numerical_statistics=column_statistics_series,
+                    )
+                std_statistics = [("std", float(std))]
+            except Exception:
+                safe_log(
+                    "warn",
+                    "Aggregate deviation computation failed for variable {variables}; "
+                    "excluding std. Partial stats emitted.",
+                    variables=[variable],
+                )
 
-        # Calculate federated quantiles safely if they do not exist yet
-        if "federated_quantiles" in variable_stats:
-            federated_quantiles = variable_stats["federated_quantiles"]
-        else:
-            federated_quantiles = safe_calculate(
-                _compute_aggregate_quantiles,
-                {
-                    "Q1": 0.0,
-                    "Q2": 0.0,
-                    "Q3": 0.0,
-                    "Q1_std_err": 0.0,
-                    "Q2_std_err": 0.0,
-                    "Q3_std_err": 0.0,
-                },
-                numerical_statistics=column_statistics_series,
-            )
-
-        # Calculate mean and safely if it does not exist yet
-        if "mean" in variable_stats:
-            mean = variable_stats["mean"]
-        else:
-            mean = safe_calculate(
-                _compute_aggregate_mean,
-                0.0,
-                numerical_statistics=column_statistics_series,
-            )
-
-        # Calculate standard deviation safely if it does not exist yet
-        if "std" in variable_stats:
-            std = variable_stats["std"]
-        else:
-            std = safe_calculate(
-                _compute_aggregate_deviation,
-                0.0,
-                numerical_statistics=column_statistics_series,
-            )
-
-        # Create DataFrame with aggregated statistics
-        aggregated_stats = pd.DataFrame(
-            {
-                "variable": [variable] * 10,
-                "statistic": [
-                    "min",
-                    "q1",
-                    "median",
-                    "q3",
-                    "max",
-                    "mean",
-                    "std",
+            aggregate_statistics = [
+                ("min", float(min_max_values["min"])),
+                *quantile_statistics,
+                ("max", float(min_max_values["max"])),
+                *mean_statistics,
+                *std_statistics,
+                (
                     "count",
-                    "outliers",
-                    "na",
-                ],
-                "value": [
-                    float(min_max_values["min"]),
-                    float(federated_quantiles["Q1"]),
-                    float(federated_quantiles["Q2"]),
-                    float(federated_quantiles["Q3"]),
-                    float(min_max_values["max"]),
-                    float(mean),
-                    float(std),
                     float(column_statistics_series.loc[(variable, "count")].iloc[0]),
+                ),
+                (
+                    "outliers",
                     float(column_statistics_series.loc[(variable, "outliers")].iloc[0]),
-                    float(column_statistics_series.loc[(variable, "na")].iloc[0]),
-                ],
-            }
-        )
+                ),
+                ("na", float(column_statistics_series.loc[(variable, "na")].iloc[0])),
+            ]
 
-        aggregated_results.append(aggregated_stats)
+            # Create DataFrame with aggregated statistics
+            aggregated_stats = pd.DataFrame(
+                {
+                    "variable": [variable] * len(aggregate_statistics),
+                    "statistic": [statistic for statistic, _ in aggregate_statistics],
+                    "value": [value for _, value in aggregate_statistics],
+                }
+            )
+
+            aggregated_results.append(aggregated_stats)
+        except Exception:
+            safe_log(
+                "warn",
+                "Error aggregating numerical statistics for variable {variables}; excluding this variable.",
+                variables=[variable],
+            )
 
     # Concatenate results with explicit dtype specification
+    if not aggregated_results:
+        return pd.DataFrame(columns=["variable", "statistic", "value"])
+
     result = pd.concat(aggregated_results, ignore_index=True)
     return result.astype({"variable": str, "statistic": str, "value": float})
 
@@ -420,32 +449,38 @@ def _orchestrate_aggregate_adjusted_deviation(df: pd.DataFrame) -> pd.DataFrame:
     adjusted_deviations = []
 
     for variable in df["variable"].unique():
-        # Filter the DataFrame for the current variable
-        column_statistics = df[df["variable"] == variable]
+        try:
+            # Filter the DataFrame for the current variable
+            column_statistics = df[df["variable"] == variable]
 
-        # Convert to Series with MultiIndex for computation
-        column_statistics_series = column_statistics.set_index(
-            ["variable", "statistic"]
-        )["value"]
+            # Convert to Series with MultiIndex for computation
+            column_statistics_series = column_statistics.set_index(
+                ["variable", "statistic"]
+            )["value"]
 
-        # Compute the adjusted sum of squared errors safely
-        adjusted_std = safe_calculate(
-            _compute_aggregate_adjusted_deviation,
-            0.0,
-            numerical_statistics=column_statistics_series,
-        )
+            # Compute the adjusted sum of squared errors safely
+            adjusted_std = _compute_aggregate_adjusted_deviation(
+                numerical_statistics=column_statistics_series,
+            )
 
-        # Create DataFrame with the result
-        aggregated_adjusted_deviations = pd.DataFrame(
-            {
-                "variable": [variable],
-                "statistic": ["adjusted std"],
-                "value": [adjusted_std],
-            }
-        )
+            # Create DataFrame with the result
+            aggregated_adjusted_deviations = pd.DataFrame(
+                {
+                    "variable": [variable],
+                    "statistic": ["adjusted std"],
+                    "value": [adjusted_std],
+                }
+            )
 
-        # Add to the list
-        adjusted_deviations.append(aggregated_adjusted_deviations)
+            # Add to the list
+            adjusted_deviations.append(aggregated_adjusted_deviations)
+        except Exception:
+            safe_log(
+                "warn",
+                "Aggregate adjusted_deviation computation failed for variable "
+                "{variables}; excluding adjusted std. Partial stats emitted.",
+                variables=[variable],
+            )
 
     # Combine all results
     if adjusted_deviations:
@@ -656,21 +691,27 @@ def _orchestrate_local_numerical_statistics(
                 drop_na=True,
             )
 
-        # Compute quantiles safely if they do not exist yet
-        if "quantiles" in column_stats:
-            quantiles = column_stats["quantiles"]
-        else:
-            quantiles = safe_calculate(
-                _compute_local_quantiles,
-                {
-                    "Q1": 0.0,
-                    "variance_Q1": 0.0,
-                    "Q2": 0.0,
-                    "variance_Q2": 0.0,
-                    "Q3": 0.0,
-                    "variance_Q3": 0.0,
-                },
-                column_values=inliers_series,
+        quantile_statistics = []
+        try:
+            # Compute quantiles if they do not exist yet
+            if "quantiles" in column_stats:
+                quantiles = column_stats["quantiles"]
+            else:
+                quantiles = _compute_local_quantiles(column_values=inliers_series)
+
+            quantile_statistics = [
+                (column_name, "Q1", quantiles["Q1"]),
+                (column_name, "variance_Q1", quantiles["variance_Q1"]),
+                (column_name, "Q2", quantiles["Q2"]),
+                (column_name, "variance_Q2", quantiles["variance_Q2"]),
+                (column_name, "Q3", quantiles["Q3"]),
+                (column_name, "variance_Q3", quantiles["variance_Q3"]),
+            ]
+        except Exception:
+            safe_log(
+                "warn",
+                "Quantile/IQR local computation failed for variable {variables}; excluding Q1, Q2, and Q3 statistics.",
+                variables=[column_name],
             )
 
         # Compute the sum of rows safely if it does not exist yet
@@ -693,12 +734,7 @@ def _orchestrate_local_numerical_statistics(
         numerical_data.extend(
             [
                 (column_name, "min", min_val),
-                (column_name, "Q1", quantiles["Q1"]),
-                (column_name, "variance_Q1", quantiles["variance_Q1"]),
-                (column_name, "Q2", quantiles["Q2"]),
-                (column_name, "variance_Q2", quantiles["variance_Q2"]),
-                (column_name, "Q3", quantiles["Q3"]),
-                (column_name, "variance_Q3", quantiles["variance_Q3"]),
+                *quantile_statistics,
                 (column_name, "max", max_val),
                 (column_name, "mean", mean),
                 (column_name, "na", na_count),
@@ -1355,7 +1391,14 @@ def _compute_aggregate_quantiles(numerical_statistics: pd.Series) -> Dict[str, f
             tau2_den = np.sum(omega_i0) - np.sum(np.power(omega_i0, 2)) / np.sum(
                 omega_i0
             )
-            tau2 = np.max([0, tau2_nom / tau2_den])
+
+            # Guard against division by zero or invalid tau2
+            if np.isclose(tau2_den, 0) or not np.isfinite(tau2_den):
+                tau2 = 0.0
+            else:
+                tau2 = np.max([0, tau2_nom / tau2_den])
+                if not np.isfinite(tau2):
+                    tau2 = 0.0
 
             # Using approach from McGrath et al. (2019), section 2, see: https://doi.org/10.1002/sim.8013
             omega_i = 1.0 / (variances_i + tau2)
@@ -1407,9 +1450,16 @@ def _compute_aggregate_adjusted_deviation(numerical_statistics: pd.Series) -> fl
         ):
             return 0.0
 
-        aggregate_deviation = np.sqrt(
-            np.sum(local_adjusted_sum_of_squared_errors) / np.sum(local_number_of_rows)
+        ratio = np.sum(local_adjusted_sum_of_squared_errors) / np.sum(
+            local_number_of_rows
         )
+
+        # Guard against NaN/inf before sqrt
+        if not np.isfinite(ratio) or ratio < 0:
+            return 0.0
+
+        aggregate_deviation = np.sqrt(ratio)
+
         return float(aggregate_deviation)
     except Exception as e:
         safe_log(
