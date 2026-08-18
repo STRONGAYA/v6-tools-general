@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
     "numpy>=2.1.2",
     "pandas>=2.2.3",
-    "vantage6-algorithm-tools >=4.0.0,<=5.0.0",
+    "vantage6-algorithm-tools==4.15",
 ]
 
 [project.optional-dependencies]
