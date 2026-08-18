@@ -490,9 +490,7 @@ class TestComputeAggregateGeneralStatistics:
 
         assert "std" in ok_stats
         assert "std" not in failing_stats
-        assert {"min", "max", "mean", "count", "outliers", "na"}.issubset(
-            failing_stats
-        )
+        assert {"min", "max", "mean", "count", "outliers", "na"}.issubset(failing_stats)
 
     def test_single_organisation_result(self):
         """Test aggregation with results from single organisation."""
@@ -710,14 +708,12 @@ class TestComputeAggregateAdjustedDeviation:
         local_gen2 = compute_local_general_statistics(org2_data)
         gen_stats = compute_aggregate_general_statistics([local_gen1, local_gen2])
 
-        original_fn = (
-            general_statistics_module._compute_aggregate_adjusted_deviation
-        )
+        original_fn = general_statistics_module._compute_aggregate_adjusted_deviation
 
         def _raise_for_failing(numerical_statistics):
-            variable = numerical_statistics.index.get_level_values(
-                "variable"
-            ).unique()[0]
+            variable = numerical_statistics.index.get_level_values("variable").unique()[
+                0
+            ]
             if variable == "failing_var":
                 raise RuntimeError("forced adjusted deviation failure")
             return original_fn(numerical_statistics)
