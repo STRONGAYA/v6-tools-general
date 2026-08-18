@@ -1457,9 +1457,6 @@ def _compute_aggregate_adjusted_deviation(numerical_statistics: pd.Series) -> fl
 
         aggregate_deviation = np.sqrt(ratio)
 
-        if not np.isfinite(aggregate_deviation):
-            return 0.0
-
         return float(aggregate_deviation)
     except Exception as e:
         safe_log(
